@@ -1,10 +1,10 @@
 {
     "user": "stepan",
     "access": {
-        "foris-controller": {
-            "methods": [ "send" ]
+        "foris-controller-about": {
+            "methods": [ "get" ]
         }
     },
-    "publish": [ "foris-controller" ],
-    "subscribe": [ "foris-controller" ]
+    "publish": [ "foris-controller-about" ],
+    "subscribe": [ "foris-controller-about" ]
 }

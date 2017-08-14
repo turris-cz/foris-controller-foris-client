@@ -36,14 +36,10 @@ class UbusSender(BaseSender):
 
     def send(self, module, action, data):
         message = {
-            "kind": "request",
-            "module": module,
-            "action": action,
+            "data": data if data else {}
         }
-        if data is not None:
-            message["data"] = data
         logger.debug("Sending message: %s" % message)
-        res = ubus.call("foris-controller", "send", {"message": message})
+        res = ubus.call("foris-controller-%s" % module, action, message)
         logger.debug("Message received: %s" % res)
         return res[0]["data"]
 

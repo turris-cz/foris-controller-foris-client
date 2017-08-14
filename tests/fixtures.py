@@ -55,7 +55,7 @@ def ubus_controller(request, ubusd_test):
         kwargs['stdout'] = devnull
 
     process = subprocess.Popen([
-        "foris-controller", "-d", "--mock-backend", "ubus", "--path", UBUS_PATH
+        "foris-controller", "-d", "--backend","mock", "ubus", "--path", UBUS_PATH
     ], **kwargs)
     yield process
 
@@ -76,7 +76,7 @@ def unix_controller(request):
         kwargs['stdout'] = devnull
 
     process = subprocess.Popen([
-        "foris-controller", "-d", "--mock-backend", "unix-socket", "--path", SOCK_PATH
+        "foris-controller", "-d", "--backend", "mock", "unix-socket", "--path", SOCK_PATH
     ], **kwargs)
     yield process
     process.kill()
@@ -86,7 +86,7 @@ def unix_controller(request):
 def ubus_client(ubusd_test, ubus_controller):
     from foris_client.buses.ubus import UbusSender
     wait_process = subprocess.Popen(
-        ["ubus", "wait_for", "foris-controller", "-s", UBUS_PATH])
+        ["ubus", "wait_for", "foris-controller-about", "-s", UBUS_PATH])
     wait_process.wait()
 
     sender = UbusSender(UBUS_PATH)

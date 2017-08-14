@@ -17,6 +17,8 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
 
+import pytest
+
 from .fixtures import ubusd_test, ubus_controller, ubus_client
 
 
@@ -26,14 +28,14 @@ def test_about(ubus_client):
 
 
 def test_nonexisting_module(ubus_client):
-    response = ubus_client.send("non-existing", "get", None)
-    assert "errors" in response
+    with pytest.raises(RuntimeError):
+        ubus_client.send("non-existing", "get", None)
 
 
 def test_nonexisting_action(ubus_client):
-    response = ubus_client.send("about", "non-existing", None)
-    assert "errors" in response
+    with pytest.raises(RuntimeError):
+        ubus_client.send("about", "non-existing", None)
 
 def test_extra_data(ubus_client):
-    response = ubus_client.send("about", "get", {})
+    response = ubus_client.send("about", "get", {"extra": "data"})
     assert "errors" in response

@@ -25,6 +25,7 @@ import time
 
 SOCK_PATH = "/tmp/foris-client-test.soc"
 UBUS_PATH = "/tmp/ubus-foris-client-test.soc"
+UBUS_PATH2 = "/tmp/ubus-foris-client-test2.soc"
 
 
 @pytest.fixture(scope="session")
@@ -35,10 +36,28 @@ def ubusd_test():
         pass
 
     ubusd_instance = subprocess.Popen(["ubusd", "-A", "tests/ubus-acl", "-s", UBUS_PATH])
+    time.sleep(0.1)
     yield ubusd_instance
     ubusd_instance.kill()
     try:
-        os.unlink(SOCK_PATH)
+        os.unlink(UBUS_PATH)
+    except:
+        pass
+
+
+@pytest.fixture(scope="session")
+def ubusd_test2():
+    try:
+        os.unlink(UBUS_PATH2)
+    except:
+        pass
+
+    ubusd_instance = subprocess.Popen(["ubusd", "-A", "tests/ubus-acl", "-s", UBUS_PATH2])
+    time.sleep(0.1)
+    yield ubusd_instance
+    ubusd_instance.kill()
+    try:
+        os.unlink(UBUS_PATH2)
     except:
         pass
 

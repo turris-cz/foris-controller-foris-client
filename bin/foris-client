@@ -23,7 +23,7 @@ import argparse
 import logging
 import json
 
-
+logging.basicConfig()
 logger = logging.getLogger("foris-client")
 
 

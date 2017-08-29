@@ -30,6 +30,17 @@ logger = logging.getLogger("foris-client.ubus")
 class UbusSender(BaseSender):
 
     def connect(self, socket_path):
+        if ubus.get_connected():
+            connected_socket = ubus.get_socket_path()
+            if socket_path == connected_socket:
+                logger.info("Already connected to '%s'." % connected_socket)
+                return
+            else:
+                logger.error(
+                    "Connected to '%s'. Disconnecting to reconnect to '%s' " %
+                    (connected_socket, socket_path)
+                )
+                self.disconnect()
         logger.debug("Trying to connect to ubus socket '%s'." % socket_path)
         ubus.connect(socket_path)
         logger.debug("Connected to ubus socket '%s'." % socket_path)
@@ -44,4 +55,8 @@ class UbusSender(BaseSender):
         return res[0]["data"]
 
     def disconnect(self):
-        ubus.disconnect()
+        if ubus.get_connected():
+            logger.debug("Disconnection from ubus.")
+            ubus.disconnect()
+        else:
+            logger.warning("Failed to disconnect from ubus (not connected)")

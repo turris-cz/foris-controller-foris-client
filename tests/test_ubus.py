@@ -18,8 +18,11 @@
 #
 
 import pytest
+import ubus
 
-from .fixtures import ubusd_test, ubus_controller, ubus_client
+from foris_client.buses.ubus import UbusSender
+
+from .fixtures import ubusd_test, ubusd_test2, ubus_controller, ubus_client, UBUS_PATH, UBUS_PATH2
 
 
 def test_about(ubus_client):
@@ -39,3 +42,17 @@ def test_nonexisting_action(ubus_client):
 def test_extra_data(ubus_client):
     response = ubus_client.send("about", "get", {"extra": "data"})
     assert "errors" in response
+
+
+def test_reconnect(ubusd_test, ubusd_test2):
+    import logging
+    logging.basicConfig()
+    logging.disable(logging.ERROR)
+    sender1 = UbusSender(UBUS_PATH)
+    assert ubus.get_socket_path() == UBUS_PATH
+    assert ubus.get_connected()
+    sender2 = UbusSender(UBUS_PATH2)
+    assert ubus.get_socket_path() == UBUS_PATH2
+    assert ubus.get_connected()
+    sender1.disconnect()
+    assert ubus.get_connected() is False

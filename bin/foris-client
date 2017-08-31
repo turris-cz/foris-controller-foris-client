@@ -23,7 +23,6 @@ import argparse
 import logging
 import json
 
-logging.basicConfig()
 logger = logging.getLogger("foris-client")
 
 
@@ -60,6 +59,8 @@ if __name__ == "__main__":
 
     if options.debug:
         logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig()
 
     if options.bus == "ubus":
         from foris_client.buses.ubus import UbusSender

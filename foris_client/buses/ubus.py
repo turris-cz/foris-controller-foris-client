@@ -49,8 +49,12 @@ class UbusSender(BaseSender):
         message = {
             "data": data if data else {}
         }
-        logger.debug("Sending message: %s" % message)
-        res = ubus.call("foris-controller-%s" % module, action, message)
+        ubus_object = "foris-controller-%s" % module
+        logger.debug(
+            "Sending calling method '%s' in object '%s': %s"
+            % (action, ubus_object, message)
+        )
+        res = ubus.call(ubus_object, action, message)
         logger.debug("Message received: %s" % res)
         return res[0]["data"]
 

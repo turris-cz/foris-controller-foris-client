@@ -1,3 +1,8 @@
+0.2.1 (unknown)
+------------------
+
+* fix debug message prints in ubus
+
 0.2 (2017-08-28)
 ----------------
 

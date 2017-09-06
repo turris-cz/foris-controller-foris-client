@@ -1,3 +1,9 @@
+0.3 (2017-09-06)
+----------------
+
+* raise an exception when an error message is recieved
+* timeout option added
+
 0.2.1 (2017-08-31)
 ------------------
 

@@ -29,13 +29,41 @@ logger = logging.getLogger(__name__)
 
 class UnixSocketSender(BaseSender):
 
-    def connect(self, socket_path):
+    def _normalize_timeout(self, timeout):
+        return None if not timeout else float(timeout) / 1000  # 0 makes non-blocking socket
+
+    def connect(self, socket_path, default_timeout=0):
+        """ connects to unix-socket
+
+        :param socket_path: path to unix-socket
+        :type socket_path: str
+        :param default_timeout: default timeout for send operations (in ms)
+        :type default_timeout: int
+        """
+        self.default_timeout = self._normalize_timeout(default_timeout)
         logger.debug("Trying to connect to '%s'." % socket_path)
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(socket_path)
-        logger.debug("Connected to '%s'." % socket_path)
+        logger.debug(
+            "Connected to '%s' (default_timeout=%d)." % (
+                socket_path, 0 if not default_timeout else default_timeout
+            )
+        )
 
-    def send(self, module, action, data):
+    def send(self, module, action, data, timeout=None):
+        """ send request
+
+        :param module: module which will be used
+        :type module: str
+        :param action: action which will be called
+        :type action: str
+        :param data: data for the request
+        :type data: dict
+        :param timeout: timeout for the request in ms (0=wait forever)
+        :returns: reply
+        """
+        timeout = self.default_timeout if timeout is None else timeout
+        timeout = self._normalize_timeout(timeout)
         message = {
             "kind": "request",
             "module": module,
@@ -53,6 +81,7 @@ class UnixSocketSender(BaseSender):
 
         received_length = struct.unpack("I", self.sock.recv(4))[0]
         logger.debug("Response length = %d." % received_length)
+        self.sock.settimeout(timeout)
         received = self.sock.recv(received_length)
         logger.debug("Message received: %s" % received)
 

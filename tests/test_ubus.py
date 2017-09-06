@@ -56,3 +56,8 @@ def test_reconnect(ubusd_test, ubusd_test2):
     assert ubus.get_connected()
     sender1.disconnect()
     assert ubus.get_connected() is False
+
+def test_timeout(ubus_client):
+    ubus_client.send("about", "get", None, timeout=1000)
+    sender = UbusSender(UBUS_PATH, default_timeout=1000)
+    sender.send("about", "get", None)

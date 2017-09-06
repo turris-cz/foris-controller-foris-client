@@ -17,8 +17,11 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
 
+import pytest
 
-from .fixtures import unix_controller, unix_socket_client
+from foris_client.buses.unix_socket import UnixSocketSender
+
+from .fixtures import unix_controller, unix_socket_client, SOCK_PATH
 
 
 def test_about(unix_socket_client):
@@ -38,3 +41,8 @@ def test_nonexisting_action(unix_socket_client):
 def test_extra_data(unix_socket_client):
     response = unix_socket_client.send("about", "get", {})
     assert "errors" in response
+
+def test_timeout(unix_socket_client):
+    unix_socket_client.send("about", "get", None, timeout=1000)
+    sender = UnixSocketSender(SOCK_PATH, default_timeout=1000)
+    sender.send("about", "get", None)

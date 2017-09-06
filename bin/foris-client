@@ -48,6 +48,10 @@ if __name__ == "__main__":
         "-a", "--action", dest="action", help="action which will be performed",
         required=True, type=str
     )
+    parser.add_argument(
+        "-t", "--timeout", dest="timeout", help="timeout in ms (default=0 - wait forever)",
+        type=int
+    )
 
     subparsers = parser.add_subparsers(help="buses", dest="bus")
     ubus_parser = subparsers.add_parser("ubus", help="use ubus to recieve commands")
@@ -65,12 +69,12 @@ if __name__ == "__main__":
     if options.bus == "ubus":
         from foris_client.buses.ubus import UbusSender
         logger.debug("Using ubus to send commands.")
-        sender = UbusSender(options.path)
+        sender = UbusSender(options.path, options.timeout)
 
     elif options.bus == "unix-socket":
         from foris_client.buses.unix_socket import UnixSocketSender
         logger.debug("Using unix-socket to send commands.")
-        sender = UnixSocketSender(options.path)
+        sender = UnixSocketSender(options.path, options.timeout)
 
     if options.input:
         with open(options.input) as f:

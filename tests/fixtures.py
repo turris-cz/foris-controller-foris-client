@@ -101,7 +101,7 @@ def unix_controller(request):
     process.kill()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def ubus_client(ubusd_test, ubus_controller):
     from foris_client.buses.ubus import UbusSender
     wait_process = subprocess.Popen(
@@ -113,7 +113,7 @@ def ubus_client(ubusd_test, ubus_controller):
     sender.disconnect()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def unix_socket_client(unix_controller):
     from foris_client.buses.unix_socket import UnixSocketSender
     while not os.path.exists(SOCK_PATH):

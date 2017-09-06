@@ -85,7 +85,12 @@ class UnixSocketSender(BaseSender):
         received = self.sock.recv(received_length)
         logger.debug("Message received: %s" % received)
 
-        return json.loads(received.decode("utf8")).get("data", {})
+        res = json.loads(received.decode("utf8")).get("data", {})
+
+        # Raise exception on error
+        self._raise_exception_on_error(res)
+
+        return res
 
     def disconnect(self):
         logger.debug("Closing connection.")

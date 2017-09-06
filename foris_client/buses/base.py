@@ -18,6 +18,20 @@
 #
 
 
+class ControllerError(Exception):
+
+    def __init__(self, errors):
+        res = ["Controller error(s) has occured:"]
+        for error in errors:
+            if "stacktrace" in error:
+                res.append(error["stacktrace"])
+            res.append(error["description"])
+            res.append("\n")
+
+        super(ControllerError, self).__init__("\n".join(res))
+        self.errors = errors
+
+
 class BaseSender(object):
     def __init__(self, *args, **kwargs):
         self.connect(*args, **kwargs)
@@ -30,3 +44,7 @@ class BaseSender(object):
 
     def disconnect(self):
         raise NotImplementedError()
+
+    def _raise_exception_on_error(self, data):
+        if "errors" in data:
+            raise ControllerError(data["errors"])

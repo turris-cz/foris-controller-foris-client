@@ -20,6 +20,7 @@
 import pytest
 
 from foris_client.buses.unix_socket import UnixSocketSender
+from foris_client.buses.base import ControllerError
 
 from .fixtures import unix_controller, unix_socket_client, SOCK_PATH
 
@@ -30,17 +31,17 @@ def test_about(unix_socket_client):
 
 
 def test_nonexisting_module(unix_socket_client):
-    response = unix_socket_client.send("non-existing", "get", None)
-    assert "errors" in response
+    with pytest.raises(ControllerError):
+        response = unix_socket_client.send("non-existing", "get", None)
 
 
 def test_nonexisting_action(unix_socket_client):
-    response = unix_socket_client.send("about", "non-existing", None)
-    assert "errors" in response
+    with pytest.raises(ControllerError):
+        response = unix_socket_client.send("about", "non-existing", None)
 
 def test_extra_data(unix_socket_client):
-    response = unix_socket_client.send("about", "get", {})
-    assert "errors" in response
+    with pytest.raises(ControllerError):
+        response = unix_socket_client.send("about", "get", {})
 
 def test_timeout(unix_socket_client):
     unix_socket_client.send("about", "get", None, timeout=1000)

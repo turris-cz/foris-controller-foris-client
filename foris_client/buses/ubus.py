@@ -82,6 +82,10 @@ class UbusSender(BaseSender):
         )
         res = ubus.call(ubus_object, action, message, timeout=timeout)
         logger.debug("Message received: %s" % res)
+
+        # Raise exception on error
+        self._raise_exception_on_error(res)
+
         return res[0]["data"]
 
     def disconnect(self):

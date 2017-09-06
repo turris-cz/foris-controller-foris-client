@@ -24,7 +24,7 @@ import struct
 
 from .base import BaseSender
 
-logger = logging.getLogger("foris-client.unix-socket")
+logger = logging.getLogger(__name__)
 
 
 class UnixSocketSender(BaseSender):

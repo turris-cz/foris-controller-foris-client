@@ -23,7 +23,7 @@ import argparse
 import logging
 import json
 
-logger = logging.getLogger("foris-client")
+logger = logging.getLogger("foris_client")
 
 
 if __name__ == "__main__":

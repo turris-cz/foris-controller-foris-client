@@ -24,7 +24,7 @@ import ubus
 
 from .base import BaseSender
 
-logger = logging.getLogger("foris-client.ubus")
+logger = logging.getLogger(__name__)
 
 
 class UbusSender(BaseSender):

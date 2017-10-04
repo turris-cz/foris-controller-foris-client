@@ -50,7 +50,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-t", "--timeout", dest="timeout", help="timeout in ms (default=0 - wait forever)",
-        type=int
+        type=int, default=0
     )
 
     subparsers = parser.add_subparsers(help="buses", dest="bus")

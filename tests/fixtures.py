@@ -68,13 +68,13 @@ def ubus_controller(request, ubusd_test):
         time.sleep(0.3)
 
     kwargs = {}
-    if request.config.getoption("--suppress-output"):
+    if not request.config.getoption("--debug-output"):
         devnull = open(os.devnull, 'wb')
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
 
     process = subprocess.Popen([
-        "foris-controller", "-d", "--backend","mock", "ubus", "--path", UBUS_PATH
+        "foris-controller", "-d", "-m", "about", "--backend", "mock", "ubus", "--path", UBUS_PATH
     ], **kwargs)
     yield process
 
@@ -89,13 +89,14 @@ def unix_controller(request):
         pass
 
     kwargs = {}
-    if request.config.getoption("--suppress-output"):
+    if not request.config.getoption("--debug-output"):
         devnull = open(os.devnull, 'wb')
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
 
     process = subprocess.Popen([
-        "foris-controller", "-d", "--backend", "mock", "unix-socket", "--path", SOCK_PATH
+        "foris-controller", "-d", "-m", "about", "--backend", "mock",
+        "unix-socket", "--path", SOCK_PATH
     ], **kwargs)
     yield process
     process.kill()

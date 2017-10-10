@@ -48,3 +48,14 @@ class BaseSender(object):
     def _raise_exception_on_error(self, data):
         if "errors" in data:
             raise ControllerError(data["errors"])
+
+
+class BaseListener(object):
+    def __init__(self, *args, **kwargs):
+        self.connect(*args, **kwargs)
+
+    def connect(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    def disconnect(self):
+        raise NotImplementedError()

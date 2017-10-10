@@ -19,18 +19,29 @@
 
 import json
 import logging
+import os
 import socket
 import struct
+import sys
+import threading
 
-from .base import BaseSender
+if sys.version_info < (3, 0):
+    import SocketServer
+else:
+    import socketserver
+    SocketServer = socketserver
+
+from .base import BaseSender, BaseListener
 
 logger = logging.getLogger(__name__)
 
 
+def _normalize_timeout(timeout):
+    return None if not timeout else float(timeout) / 1000  # 0 makes non-blocking socket
+
+
 class UnixSocketSender(BaseSender):
 
-    def _normalize_timeout(self, timeout):
-        return None if not timeout else float(timeout) / 1000  # 0 makes non-blocking socket
 
     def connect(self, socket_path, default_timeout=0):
         """ connects to unix-socket
@@ -40,7 +51,7 @@ class UnixSocketSender(BaseSender):
         :param default_timeout: default timeout for send operations (in ms)
         :type default_timeout: int
         """
-        self.default_timeout = self._normalize_timeout(default_timeout)
+        self.default_timeout = _normalize_timeout(default_timeout)
         logger.debug("Trying to connect to '%s'." % socket_path)
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(socket_path)
@@ -63,7 +74,7 @@ class UnixSocketSender(BaseSender):
         :returns: reply
         """
         timeout = self.default_timeout if timeout is None else timeout
-        timeout = self._normalize_timeout(timeout)
+        timeout = _normalize_timeout(timeout)
         message = {
             "kind": "request",
             "module": module,
@@ -96,3 +107,43 @@ class UnixSocketSender(BaseSender):
         logger.debug("Closing connection.")
         self.sock.close()
         logger.debug("Connection closed.")
+
+
+class UnixSocketListener(BaseListener):
+
+    def connect(self, socket_path, handler, module=None, timeout=0):
+        """ connects to ubus and starts to listen
+
+        :param socket_path: path to ubus socket
+        :type socket_path: str
+        :param handler: handler which will be called on obtained data
+        :type handler: callable
+        :param timeout: how log is the listen period (in ms)
+        :type timeout: int
+        """
+        timeout = _normalize_timeout(timeout)
+        lock = threading.Lock()
+
+        class Server(SocketServer.ThreadingMixIn, SocketServer.UnixStreamServer):
+            pass
+        Server.timeout = timeout
+
+        class Handler(SocketServer.StreamRequestHandler):
+            def handle(self):
+                while True:
+                    length_raw = self.rfile.read(4)
+                    if len(length_raw) != 4:
+                        break
+                    length = struct.unpack("I", length_raw)[0]
+                    data = json.loads(self.rfile.read(length))
+                    logger.debug("Notification recieved %s." % data)
+                    if not module or data["module"] == module:
+                        with lock:
+                            logger.debug("Triggering handler.")
+                            handler(data)
+        server = Server(socket_path, Handler)
+
+        if timeout:
+            server.handle_request()
+        else:
+            server.serve_forever()

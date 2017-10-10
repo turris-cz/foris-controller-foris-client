@@ -35,7 +35,7 @@ setup(
         'foris_client',
         'foris_client.buses',
     ],
-    scripts=['bin/foris-client'],
+    scripts=['bin/foris-client', 'bin/foris-listener'],
     url='https://gitlab.labs.nic.cz/turris/foris-client',
     license='COPYING',
     description=DESCRIPTION,

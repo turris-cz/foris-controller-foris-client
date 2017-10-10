@@ -24,6 +24,7 @@ import time
 
 
 SOCK_PATH = "/tmp/foris-client-test.soc"
+NOTIFICATIONS_SOCK_PATH = "/tmp/foris-client-notifications-test.soc"
 UBUS_PATH = "/tmp/ubus-foris-client-test.soc"
 UBUS_PATH2 = "/tmp/ubus-foris-client-test2.soc"
 
@@ -82,7 +83,26 @@ def ubus_controller(request, ubusd_test):
 
 
 @pytest.fixture(scope="session")
-def unix_controller(request):
+def unix_listener(request):
+    try:
+        os.unlink(NOTIFICATIONS_SOCK_PATH)
+    except:
+        pass
+
+    kwargs = {}
+    if not request.config.getoption("--debug-output"):
+        devnull = open(os.devnull, 'wb')
+        kwargs['stderr'] = devnull
+        kwargs['stdout'] = devnull
+    process = subprocess.Popen([
+        "bin/foris-listener", "-d", "unix-socket", "--path", NOTIFICATIONS_SOCK_PATH
+    ], **kwargs)
+    yield process
+    process.kill()
+
+
+@pytest.fixture(scope="session")
+def unix_controller(request, unix_listener):
     try:
         os.unlink(SOCK_PATH)
     except:
@@ -96,7 +116,7 @@ def unix_controller(request):
 
     process = subprocess.Popen([
         "foris-controller", "-d", "-m", "about", "--backend", "mock",
-        "unix-socket", "--path", SOCK_PATH
+        "unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH
     ], **kwargs)
     yield process
     process.kill()

@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import logging
 import ubus
 
-from .base import BaseSender
+from .base import BaseSender, BaseListener
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,56 @@ class UbusSender(BaseSender):
 
     def disconnect(self):
         if ubus.get_connected():
-            logger.debug("Disconnection from ubus.")
+            logger.debug("Disconnecting from ubus.")
+            ubus.disconnect()
+        else:
+            logger.warning("Failed to disconnect from ubus (not connected)")
+
+
+class UbusListener(BaseListener):
+    def connect(self, socket_path, handler, module=None, timeout=0):
+        """ connects to ubus and starts to listen
+
+        :param socket_path: path to ubus socket
+        :type socket_path: str
+        :param handler: handler which will be called on obtained data
+        :type handler: callable
+        :param timeout: how log is the listen period (in ms)
+        :type timeout: int
+        """
+
+        def inner_handler(module, data):
+            module_name = module.lstrip("foris-controller-")
+            msg = {
+                "module": module_name,
+                "kind": "notification",
+                "action": data["action"],
+                "data": data["data"],
+            }
+            logger.debug("Notification recieved %s." % msg)
+            handler(msg)
+
+        connected_before = ubus.get_connected()
+        if not connected_before:
+            logger.debug("Connecting to ubus (%s)." % socket_path)
+            ubus.connect(socket_path)
+            listen_object = "foris-controller-%s" % (module if module else "*")
+            ubus.listen((listen_object, inner_handler))
+
+        if timeout:
+            ubus.loop(timeout)
+        else:
+            while True:
+                ubus.loop(500)
+
+        if not connected_before:
+            self.disconnect()
+
+    def disconnect(self):
+        """ disconnects from ubus
+        """
+        if ubus.get_connected():
+            logger.debug("Disconnecting from ubus.")
             ubus.disconnect()
         else:
             logger.warning("Failed to disconnect from ubus (not connected)")

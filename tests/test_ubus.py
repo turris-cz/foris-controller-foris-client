@@ -17,29 +17,34 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
 
+import os
 import pytest
 import ubus
+import time
 
 from foris_client.buses.ubus import UbusSender
 
-from .fixtures import ubusd_test, ubusd_test2, ubus_controller, ubus_client, UBUS_PATH, UBUS_PATH2
+from .fixtures import (
+    ubusd_test, ubusd_test2, ubus_controller, ubus_client, UBUS_PATH, UBUS_PATH2, ubus_listener,
+    ubus_notify
+)
 
 
-def test_about(ubus_client):
+def test_about(ubusd_test, ubus_client):
     response = ubus_client.send("about", "get", None)
     assert "errors" not in response
 
 
-def test_nonexisting_module(ubus_client):
+def test_nonexisting_module(ubusd_test, ubus_client):
     with pytest.raises(RuntimeError):
         ubus_client.send("non-existing", "get", None)
 
 
-def test_nonexisting_action(ubus_client):
+def test_nonexisting_action(ubusd_test, ubus_client):
     with pytest.raises(RuntimeError):
         ubus_client.send("about", "non-existing", None)
 
-def test_extra_data(ubus_client):
+def test_extra_data(ubusd_test, ubus_client):
     response = ubus_client.send("about", "get", {"extra": "data"})
     assert "errors" in response
 
@@ -57,7 +62,34 @@ def test_reconnect(ubusd_test, ubusd_test2):
     sender1.disconnect()
     assert ubus.get_connected() is False
 
-def test_timeout(ubus_client):
+
+def test_timeout(ubusd_test, ubus_client):
     ubus_client.send("about", "get", None, timeout=1000)
     sender = UbusSender(UBUS_PATH, default_timeout=1000)
     sender.send("about", "get", None)
+
+
+def test_notifications_request(ubusd_test, ubus_controller, ubus_listener, ubus_client):
+    _, read_listener_output = ubus_listener
+
+    old_data = read_listener_output()
+    ubus_client.send("web", "set_language", {"language": "cs"})
+    last = read_listener_output(old_data)[-1]
+    assert last == {
+        u'action': u'set_language',
+        u'data': {u'language': u'cs'},
+        u'kind': u'notification',
+        u'module': u'web'
+     }
+
+def test_notifications_cmd(ubusd_test, ubus_listener, ubus_notify):
+    _, read_listener_output = ubus_listener
+    old_data = read_listener_output()
+    ubus_notify.notify("test_module", "test_action", {"test_data": "test"})
+    last = read_listener_output(old_data)[-1]
+    assert last == {
+        u'action': u'test_action',
+        u'data': {u'test_data': u'test'},
+        u'kind': u'notification',
+        u'module': u'test_module',
+    }

@@ -109,7 +109,7 @@ class UbusListener(BaseListener):
         """
 
         def inner_handler(module, data):
-            module_name = module.lstrip("foris-controller-")
+            module_name = module[len("foris-controller-"):]
             msg = {
                 "module": module_name,
                 "kind": "notification",

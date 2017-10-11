@@ -17,6 +17,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
 
+import json
 import os
 import pytest
 import subprocess
@@ -25,8 +26,22 @@ import time
 
 SOCK_PATH = "/tmp/foris-client-test.soc"
 NOTIFICATIONS_SOCK_PATH = "/tmp/foris-client-notifications-test.soc"
+NOTIFICATIONS_OUTPUT_PATH = "/tmp/foris-client-notifications-test.json"
 UBUS_PATH = "/tmp/ubus-foris-client-test.soc"
 UBUS_PATH2 = "/tmp/ubus-foris-client-test2.soc"
+
+def read_listener_output(old_data=None):
+    while not os.path.exists(NOTIFICATIONS_OUTPUT_PATH):
+        time.sleep(0.2)
+
+    while True:
+        with open(NOTIFICATIONS_OUTPUT_PATH) as f:
+            data = f.readlines()
+        last_data = [json.loads(e.strip()) for e in data]
+        if not old_data == last_data:
+            break
+
+    return last_data
 
 
 @pytest.fixture(scope="session")
@@ -75,7 +90,8 @@ def ubus_controller(request, ubusd_test):
         kwargs['stdout'] = devnull
 
     process = subprocess.Popen([
-        "foris-controller", "-d", "-m", "about", "--backend", "mock", "ubus", "--path", UBUS_PATH
+        "foris-controller", "-d", "-m", "about,web", "--backend", "mock",
+        "ubus", "--path", UBUS_PATH
     ], **kwargs)
     yield process
 
@@ -89,20 +105,26 @@ def unix_listener(request):
     except:
         pass
 
+    try:
+        os.unlink(NOTIFICATIONS_OUTPUT_PATH)
+    except:
+        pass
+
     kwargs = {}
     if not request.config.getoption("--debug-output"):
         devnull = open(os.devnull, 'wb')
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
     process = subprocess.Popen([
-        "bin/foris-listener", "-d", "unix-socket", "--path", NOTIFICATIONS_SOCK_PATH
+        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH,
+        "unix-socket", "--path", NOTIFICATIONS_SOCK_PATH
     ], **kwargs)
-    yield process
+    yield process, read_listener_output
     process.kill()
 
 
 @pytest.fixture(scope="session")
-def unix_controller(request, unix_listener):
+def unix_controller(request):
     try:
         os.unlink(SOCK_PATH)
     except:
@@ -115,7 +137,7 @@ def unix_controller(request, unix_listener):
         kwargs['stdout'] = devnull
 
     process = subprocess.Popen([
-        "foris-controller", "-d", "-m", "about", "--backend", "mock",
+        "foris-controller", "-d", "-m", "about,web", "--backend", "mock",
         "unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH
     ], **kwargs)
     yield process
@@ -140,5 +162,45 @@ def unix_socket_client(unix_controller):
     while not os.path.exists(SOCK_PATH):
         time.sleep(0.3)
     sender = UnixSocketSender(SOCK_PATH)
+    yield sender
+    sender.disconnect()
+
+
+@pytest.fixture(scope="session")
+def ubus_listener(request):
+    try:
+        os.unlink(NOTIFICATIONS_OUTPUT_PATH)
+    except:
+        pass
+
+    kwargs = {}
+    if not request.config.getoption("--debug-output"):
+        devnull = open(os.devnull, 'wb')
+        kwargs['stderr'] = devnull
+        kwargs['stdout'] = devnull
+
+    process = subprocess.Popen([
+        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH,
+        "ubus", "--path", UBUS_PATH
+    ], **kwargs)
+    yield process, read_listener_output
+    process.kill()
+
+
+@pytest.fixture(scope="function")
+def unix_notify(unix_listener):
+    from foris_controller.buses.unix_socket import UnixSocketNotificationSender
+    while not os.path.exists(NOTIFICATIONS_SOCK_PATH):
+        time.sleep(0.2)
+    sender = UnixSocketNotificationSender(NOTIFICATIONS_SOCK_PATH)
+    yield sender
+    sender.disconnect()
+
+@pytest.fixture(scope="function")
+def ubus_notify(ubus_listener):
+    from foris_controller.buses.ubus import UbusNotificationSender
+    while not os.path.exists(UBUS_PATH):
+        time.sleep(0.2)
+    sender = UbusNotificationSender(UBUS_PATH)
     yield sender
     sender.disconnect()

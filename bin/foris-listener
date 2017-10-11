@@ -26,6 +26,7 @@ import os
 
 logger = logging.getLogger("foris_listener")
 
+
 if __name__ == "__main__":
 
     # Parse the command line options
@@ -61,9 +62,11 @@ if __name__ == "__main__":
 
     if options.output:
         f = open(options.output, "w")
+        f.flush()
 
         def print_to_file(data):
             f.write(json.dumps(data) + "\n")
+            f.flush()
 
         handler = print_to_file
     else:

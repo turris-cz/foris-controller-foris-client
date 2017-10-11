@@ -22,7 +22,7 @@ import pytest
 from foris_client.buses.unix_socket import UnixSocketSender
 from foris_client.buses.base import ControllerError
 
-from .fixtures import unix_controller, unix_socket_client, SOCK_PATH, unix_listener
+from .fixtures import unix_controller, unix_socket_client, SOCK_PATH, unix_listener, unix_notify
 
 
 def test_about(unix_listener, unix_socket_client):
@@ -47,3 +47,28 @@ def test_timeout(unix_listener, unix_socket_client):
     unix_socket_client.send("about", "get", None, timeout=1000)
     sender = UnixSocketSender(SOCK_PATH, default_timeout=1000)
     sender.send("about", "get", None)
+
+def test_notifications_request(unix_listener, unix_socket_client):
+    _, read_listener_output = unix_listener
+    old_data = read_listener_output()
+    unix_socket_client.send("web", "set_language", {"language": "cs"})
+    last = read_listener_output(old_data)[-1]
+    assert last == {
+        u'action': u'set_language',
+        u'data': {u'language': u'cs'},
+        u'kind': u'notification',
+        u'module': u'web'
+     }
+
+
+def test_notifications_cmd(unix_listener, unix_notify):
+    _, read_listener_output = unix_listener
+    old_data = read_listener_output()
+    unix_notify.notify("test_module", "test_action", {"test_data": "test"})
+    last = read_listener_output(old_data)[-1]
+    assert last == {
+        u'action': u'test_action',
+        u'data': {u'test_data': u'test'},
+        u'kind': u'notification',
+        u'module': u'test_module',
+    }

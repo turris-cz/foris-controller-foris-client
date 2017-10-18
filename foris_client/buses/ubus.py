@@ -107,6 +107,18 @@ class UbusListener(BaseListener):
         :param timeout: how log is the listen period (in ms)
         :type timeout: int
         """
+        self.disconnecting = False
+        self.timeout = timeout
+        self.module = module
+        self.handler = handler
+
+        self.connected_before = ubus.get_connected()
+        if not self.connected_before:
+            logger.debug("Connecting to ubus (%s)." % socket_path)
+            ubus.connect(socket_path)
+
+    def listen(self):
+        logger.debug("Starting to listen.")
 
         def inner_handler(module, data):
             module_name = module[len("foris-controller-"):]
@@ -117,28 +129,30 @@ class UbusListener(BaseListener):
                 "data": data["data"],
             }
             logger.debug("Notification recieved %s." % msg)
-            handler(msg)
+            self.handler(msg)
 
-        connected_before = ubus.get_connected()
-        if not connected_before:
-            logger.debug("Connecting to ubus (%s)." % socket_path)
-            ubus.connect(socket_path)
-            listen_object = "foris-controller-%s" % (module if module else "*")
-            ubus.listen((listen_object, inner_handler))
+        listen_object = "foris-controller-%s" % (self.module if self.module else "*")
+        logger.debug("Listening to '%s'." % listen_object)
+        ubus.listen((listen_object, inner_handler))
 
-        if timeout:
-            ubus.loop(timeout)
+        if self.timeout:
+            ubus.loop(self.timeout)
         else:
             while True:
                 ubus.loop(500)
-
-        if not connected_before:
-            self.disconnect()
+                if self.disconnecting:
+                    break
 
     def disconnect(self):
         """ disconnects from ubus
         """
-        if ubus.get_connected():
+        self.disconnecting = True
+        if self.connected_before:
+            logger.debug(
+                "Program was connected to ubus before listener started. "
+                "-> don't diconnect"
+            )
+        elif ubus.get_connected():
             logger.debug("Disconnecting from ubus.")
             ubus.disconnect()
         else:

@@ -121,12 +121,12 @@ class UnixSocketListener(BaseListener):
         :param timeout: how log is the listen period (in ms)
         :type timeout: int
         """
-        timeout = _normalize_timeout(timeout)
+        self.timeout = _normalize_timeout(timeout)
         lock = threading.Lock()
 
         class Server(SocketServer.ThreadingMixIn, SocketServer.UnixStreamServer):
             pass
-        Server.timeout = timeout
+        Server.timeout = self.timeout
 
         class Handler(SocketServer.StreamRequestHandler):
             def handle(self):
@@ -141,9 +141,23 @@ class UnixSocketListener(BaseListener):
                         with lock:
                             logger.debug("Triggering handler.")
                             handler(data)
-        server = Server(socket_path, Handler)
 
-        if timeout:
-            server.handle_request()
+        self.server = Server(socket_path, Handler)
+
+    def listen(self):
+        logger.debug("Starting to listen.")
+        if self.timeout:
+            self.server.handle_request()
         else:
-            server.serve_forever()
+            self.server.serve_forever()
+
+    def disconnect(self):
+        logger.debug("Disconnecting from socket.")
+        try:
+            self.server.shutdown()
+        except:
+            pass
+        try:
+            self.server.server_close()
+        except:
+            pass

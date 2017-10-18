@@ -196,6 +196,7 @@ def unix_notify(unix_listener):
     yield sender
     sender.disconnect()
 
+
 @pytest.fixture(scope="function")
 def ubus_notify(ubus_listener):
     from foris_controller.buses.ubus import UbusNotificationSender

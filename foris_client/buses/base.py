@@ -54,6 +54,9 @@ class BaseListener(object):
     def __init__(self, *args, **kwargs):
         self.connect(*args, **kwargs)
 
+    def listen(self):
+        raise NotImplementedError()
+
     def connect(self, *args, **kwargs):
         raise NotImplementedError()
 

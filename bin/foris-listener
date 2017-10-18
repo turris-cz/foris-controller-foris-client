@@ -81,7 +81,7 @@ if __name__ == "__main__":
         if options.bus == "ubus":
             from foris_client.buses.ubus import UbusListener
             logger.debug("Using ubus to listen for notifications.")
-            UbusListener(options.path, handler, options.module, options.timeout)
+            listener = UbusListener(options.path, handler, options.module, options.timeout)
 
         elif options.bus == "unix-socket":
             from foris_client.buses.unix_socket import UnixSocketListener
@@ -90,7 +90,9 @@ if __name__ == "__main__":
                 os.unlink(options.path)
             except OSError:
                 pass
-            UnixSocketListener(options.path, handler, options.module, options.timeout)
+            listener = UnixSocketListener(options.path, handler, options.module, options.timeout)
+
+        listener.listen()
     finally:
         if f:
             f.close()

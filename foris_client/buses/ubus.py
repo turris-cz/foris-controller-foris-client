@@ -141,19 +141,21 @@ class UbusListener(BaseListener):
             while True:
                 ubus.loop(500)
                 if self.disconnecting:
+                    if self.connected_before:
+                        logger.debug(
+                            "Program was connected to ubus before listener started. "
+                            "-> don't diconnect"
+                        )
+                    elif ubus.get_connected():
+                        logger.debug("Disconnecting from ubus.")
+                        ubus.disconnect()
+                    else:
+                        logger.warning("Failed to disconnect from ubus (not connected)")
+                    logger.debug("Disconnected.")
                     break
 
     def disconnect(self):
         """ disconnects from ubus
         """
+        logger.debug("Marked for disconnect.")
         self.disconnecting = True
-        if self.connected_before:
-            logger.debug(
-                "Program was connected to ubus before listener started. "
-                "-> don't diconnect"
-            )
-        elif ubus.get_connected():
-            logger.debug("Disconnecting from ubus.")
-            ubus.disconnect()
-        else:
-            logger.warning("Failed to disconnect from ubus (not connected)")

@@ -1,3 +1,9 @@
+0.4 (2017-10-20)
+----------------
+
+* support for notifications added
+* some other fixes
+
 0.3 (2017-09-06)
 ----------------
 

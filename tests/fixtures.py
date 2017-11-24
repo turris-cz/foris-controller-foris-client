@@ -17,6 +17,7 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
 
+import itertools
 import json
 import os
 import pytest
@@ -29,6 +30,12 @@ NOTIFICATIONS_SOCK_PATH = "/tmp/foris-client-notifications-test.soc"
 NOTIFICATIONS_OUTPUT_PATH = "/tmp/foris-client-notifications-test.json"
 UBUS_PATH = "/tmp/ubus-foris-client-test.soc"
 UBUS_PATH2 = "/tmp/ubus-foris-client-test2.soc"
+LISTENER_LOG = "/tmp/ubus-foris-client-listener.txt"
+
+EXTRA_MODULE_PATHS = [
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_modules", "echo")
+]
+
 
 def read_listener_output(old_data=None):
     while not os.path.exists(NOTIFICATIONS_OUTPUT_PATH):
@@ -89,10 +96,16 @@ def ubus_controller(request, ubusd_test):
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
 
-    process = subprocess.Popen([
-        "foris-controller", "-d", "-m", "about,web", "--backend", "mock",
-        "ubus", "--path", UBUS_PATH
-    ], **kwargs)
+    extra_paths = list(itertools.chain.from_iterable(
+        [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
+
+    process = subprocess.Popen(
+        [
+            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo",
+            "--backend", "mock"
+        ] + extra_paths + ["ubus", "--path", UBUS_PATH]
+        , **kwargs
+    )
     yield process
 
     process.kill()
@@ -110,16 +123,35 @@ def unix_listener(request):
     except:
         pass
 
-    kwargs = {}
+    try:
+        os.unlink(LISTENER_LOG)
+    except:
+        pass
+
+    kwargs = {"preexec_fn": lambda: os.environ.update(PYTHONUNBUFFERED="1")}
     if not request.config.getoption("--debug-output"):
         devnull = open(os.devnull, 'wb')
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
     process = subprocess.Popen([
-        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH,
+        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
         "unix-socket", "--path", NOTIFICATIONS_SOCK_PATH
     ], **kwargs)
+
+    while True:
+        if os.path.exists(LISTENER_LOG):
+            with open(LISTENER_LOG) as f:
+                if "Starting to listen" in f.read():
+                    break
+        time.sleep(0.3)
+
     yield process, read_listener_output
+
+    try:
+        os.unlink(LISTENER_LOG)
+    except:
+        pass
+
     process.kill()
 
 
@@ -136,10 +168,18 @@ def unix_controller(request):
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
 
-    process = subprocess.Popen([
-        "foris-controller", "-d", "-m", "about,web", "--backend", "mock",
-        "unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH
-    ], **kwargs)
+    extra_paths = list(itertools.chain.from_iterable(
+        [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
+
+    process = subprocess.Popen(
+        [
+            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo",
+            "--backend", "mock",
+        ] + extra_paths + [
+            "unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH
+        ],
+        **kwargs
+    )
     yield process
     process.kill()
 
@@ -173,16 +213,33 @@ def ubus_listener(request):
     except:
         pass
 
-    kwargs = {}
+    try:
+        os.unlink(LISTENER_LOG)
+    except:
+        pass
+
+    kwargs = {"preexec_fn": lambda: os.environ.update(PYTHONUNBUFFERED="1")}
     if not request.config.getoption("--debug-output"):
         devnull = open(os.devnull, 'wb')
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
-
     process = subprocess.Popen([
-        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH,
+        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
         "ubus", "--path", UBUS_PATH
     ], **kwargs)
+
+    while True:
+        if os.path.exists(LISTENER_LOG):
+            with open(LISTENER_LOG) as f:
+                if "Listening to 'foris-controller-*'" in f.read():
+                    break
+        time.sleep(0.3)
+
+    try:
+        os.unlink(LISTENER_LOG)
+    except:
+        pass
+
     yield process, read_listener_output
     process.kill()
 

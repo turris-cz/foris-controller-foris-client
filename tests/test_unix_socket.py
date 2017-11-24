@@ -18,6 +18,8 @@
 #
 
 import pytest
+import random
+import string
 
 from foris_client.buses.unix_socket import UnixSocketSender
 from foris_client.buses.base import ControllerError
@@ -28,6 +30,15 @@ from .fixtures import unix_controller, unix_socket_client, SOCK_PATH, unix_liste
 def test_about(unix_listener, unix_socket_client):
     response = unix_socket_client.send("about", "get", None)
     assert "errors" not in response
+
+
+def test_long_messages(unix_listener, unix_socket_client):
+    data = {
+        "random_characters": "".join(
+            random.choice(string.ascii_letters) for _ in range(1024 * 1024))
+    }
+    res = unix_socket_client.send("echo", "echo", {"request_msg": data})
+    assert res == {"reply_msg": data}
 
 
 def test_nonexisting_module(unix_listener, unix_socket_client):

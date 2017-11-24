@@ -17,12 +17,13 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
 
-import os
 import pytest
+import random
+import string
 import ubus
-import time
 
 from foris_client.buses.ubus import UbusSender
+from foris_client.buses.base import ControllerError
 
 from .fixtures import (
     ubusd_test, ubusd_test2, ubus_controller, ubus_client, UBUS_PATH, UBUS_PATH2, ubus_listener,
@@ -32,7 +33,17 @@ from .fixtures import (
 
 def test_about(ubusd_test, ubus_client):
     response = ubus_client.send("about", "get", None)
+    assert isinstance(response, dict)
     assert "errors" not in response
+
+
+def test_long_messages(ubusd_test, ubus_client):
+    data = {
+        "random_characters": "".join(
+            random.choice(string.ascii_letters) for _ in range(1024 * 1024))
+    }
+    res = ubus_client.send("echo", "echo", {"request_msg": data})
+    assert res == {"reply_msg": data}
 
 
 def test_nonexisting_module(ubusd_test, ubus_client):
@@ -44,9 +55,10 @@ def test_nonexisting_action(ubusd_test, ubus_client):
     with pytest.raises(RuntimeError):
         ubus_client.send("about", "non-existing", None)
 
+
 def test_extra_data(ubusd_test, ubus_client):
-    response = ubus_client.send("about", "get", {"extra": "data"})
-    assert "errors" in response
+    with pytest.raises(ControllerError):
+        response = ubus_client.send("about", "get", {"extra": "data"})
 
 
 def test_reconnect(ubusd_test, ubusd_test2):
@@ -56,7 +68,7 @@ def test_reconnect(ubusd_test, ubusd_test2):
     sender1 = UbusSender(UBUS_PATH)
     assert ubus.get_socket_path() == UBUS_PATH
     assert ubus.get_connected()
-    sender2 = UbusSender(UBUS_PATH2)
+    UbusSender(UBUS_PATH2)
     assert ubus.get_socket_path() == UBUS_PATH2
     assert ubus.get_connected()
     sender1.disconnect()
@@ -80,7 +92,8 @@ def test_notifications_request(ubusd_test, ubus_controller, ubus_listener, ubus_
         u'data': {u'language': u'cs'},
         u'kind': u'notification',
         u'module': u'web'
-     }
+    }
+
 
 def test_notifications_cmd(ubusd_test, ubus_listener, ubus_notify):
     _, read_listener_output = ubus_listener

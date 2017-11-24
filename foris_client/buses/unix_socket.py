@@ -90,11 +90,18 @@ class UnixSocketSender(BaseSender):
         self.sock.sendall(length_bytes + raw_message)
         logger.debug("Message was send. Waiting for response.")
 
-        received_length = struct.unpack("I", self.sock.recv(4))[0]
-        logger.debug("Response length = %d." % received_length)
+        length = struct.unpack("I", self.sock.recv(4))[0]
+        logger.debug("Response length = %d." % length)
+
         self.sock.settimeout(timeout)
-        received = self.sock.recv(received_length)
-        logger.debug("Message received: %s" % received)
+        received = self.sock.recv(length)
+        recv_len = len(received)
+        while recv_len < length:
+            received += self.sock.recv(length)
+            recv_len = len(received)
+            logger.debug("Partial message recieved.")
+
+        logger.debug("Message received: %s", received)
 
         res = json.loads(received.decode("utf8")).get("data", {})
 

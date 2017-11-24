@@ -21,11 +21,16 @@ from __future__ import absolute_import
 
 import logging
 import ubus
+import uuid
+import json
 
 from .base import BaseSender, BaseListener
 
 logger = logging.getLogger(__name__)
 
+def _chunks(data, size):
+    for i in range(0, len(data), size):
+        yield data[i:i + size]
 
 class UbusSender(BaseSender):
 
@@ -71,22 +76,41 @@ class UbusSender(BaseSender):
         :returns: reply
         """
         timeout = self.default_timeout if timeout is None else timeout
-
-        message = {
-            "data": data if data else {}
-        }
         ubus_object = "foris-controller-%s" % module
+
+        dumped_data = json.dumps(data if data else {})
+        request_id = str(uuid.uuid4())
+
         logger.debug(
             "Sending calling method '%s' in object '%s': %s"
-            % (action, ubus_object, message)
+            % (action, ubus_object, dumped_data[:10000])
         )
-        res = ubus.call(ubus_object, action, message, timeout=timeout)
-        logger.debug("Message received: %s" % res)
+
+        if len(dumped_data) > 512 * 1024:
+            for data_part in _chunks(dumped_data, 512 * 1024):
+                ubus.call(ubus_object, action, {
+                    "data": {}, "final": False, "multipart": True,
+                    "request_id": request_id, "multipart_data": data_part,
+                })
+            res = ubus.call(ubus_object, action, {
+                "data": {}, "final": True, "multipart": True,
+                "request_id": request_id, "multipart_data": "",
+            })
+        else:
+            res = ubus.call(ubus_object, action, {
+                "data": data if data else {}, "final": True, "multipart": False,
+                "request_id": request_id, "multipart_data": "",
+            })
+
+        raw_response = "".join([e["data"] for e in res])
+        logger.debug("Message received: %s", raw_response[:10000])
+
+        response = json.loads(raw_response)
 
         # Raise exception on error
-        self._raise_exception_on_error(res)
+        self._raise_exception_on_error(response)
 
-        return res[0]["data"]
+        return response
 
     def disconnect(self):
         if ubus.get_connected():

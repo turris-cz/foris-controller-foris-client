@@ -26,6 +26,7 @@ import os
 
 logger = logging.getLogger("foris_listener")
 
+LOGGER_MAX_LEN = 10000
 
 if __name__ == "__main__":
 
@@ -45,6 +46,10 @@ if __name__ == "__main__":
         "-t", "--timeout", dest="timeout", help="timeout in ms (default=0 - listen forever)",
         type=int, default=0
     )
+    parser.add_argument(
+        "-l", "--log-file", default=None,
+        help="file where the logs will we appended", required=False
+    )
 
     subparsers = parser.add_subparsers(help="buses", dest="bus")
     ubus_parser = subparsers.add_parser("ubus", help="use ubus to obtain notificatins")
@@ -55,10 +60,18 @@ if __name__ == "__main__":
 
     options = parser.parse_args()
 
+    logging_format = "%(levelname)s:%(name)s:%(message)." + str(LOGGER_MAX_LEN) + "s"
     if options.debug:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, format=logging_format)
     else:
-        logging.basicConfig()
+        logging.basicConfig(format=logging_format)
+
+    if options.log_file:
+        handler = logging.FileHandler(options.log_file)
+        if options.debug:
+            handler.setLevel(logging.DEBUG)
+        handler.setFormatter(logging.Formatter("[%(created)f:%(process)d]" + logging.BASIC_FORMAT))
+        logging.getLogger().addHandler(handler)
 
     if options.output:
         f = open(options.output, "w")

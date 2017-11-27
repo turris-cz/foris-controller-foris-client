@@ -32,9 +32,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="foris-client")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False)
 
-    parser.add_argument(
+    input_group = parser.add_mutually_exclusive_group()
+    input_group.add_argument(
         "-i", "--input", dest="input", default=None, type=str, metavar="INPUT_FILE",
         help="input data file in json format (when not present no data will be sent)."
+    )
+    input_group.add_argument(
+        "-I", "--input-json", dest="json", default=None, type=str, metavar="INPUT_JSON",
+        help="input data in json format (when not present no data will be sent)."
     )
     parser.add_argument(
         "-o", "--output", dest="output", default=None, type=str, metavar="OUTPUT_FILE",
@@ -76,11 +81,13 @@ if __name__ == "__main__":
         logger.debug("Using unix-socket to send commands.")
         sender = UnixSocketSender(options.path, options.timeout)
 
+    data = None
     if options.input:
         with open(options.input) as f:
             data = json.load(f)
-    else:
-        data = None
+
+    if options.json:
+        data = json.loads(options.json)
 
     response = sender.send(options.module, options.action, data)
     if not options.output:

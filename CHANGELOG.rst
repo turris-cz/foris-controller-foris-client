@@ -1,3 +1,9 @@
+0.5 (2017-12-13)
+----------------
+
+* ability to pass json as cmdline added (`-I` parameter) added
+* long message handling
+
 0.4 (2017-10-20)
 ----------------
 

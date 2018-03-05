@@ -101,7 +101,7 @@ def ubus_controller(request, ubusd_test):
 
     process = subprocess.Popen(
         [
-            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo",
+            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo", "-m", "maintain",
             "--backend", "mock"
         ] + extra_paths + ["ubus", "--path", UBUS_PATH]
         , **kwargs
@@ -173,7 +173,7 @@ def unix_controller(request):
 
     process = subprocess.Popen(
         [
-            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo",
+            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo", "-m", "maintain",
             "--backend", "mock",
         ] + extra_paths + [
             "unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH

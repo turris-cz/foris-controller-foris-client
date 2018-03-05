@@ -162,9 +162,9 @@ class UnixSocketListener(BaseListener):
         logger.debug("Disconnecting from socket.")
         try:
             self.server.shutdown()
-        except:
+        except Exception:
             pass
         try:
             self.server.server_close()
-        except:
+        except Exception:
             pass

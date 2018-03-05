@@ -97,12 +97,19 @@ def test_notifications_request(ubusd_test, ubus_controller, ubus_listener, ubus_
 
 def test_notifications_cmd(ubusd_test, ubus_listener, ubus_notify):
     _, read_listener_output = ubus_listener
-    old_data = read_listener_output()
+    data = read_listener_output()
     ubus_notify.notify("test_module", "test_action", {"test_data": "test"})
-    last = read_listener_output(old_data)[-1]
-    assert last == {
+    data = read_listener_output(data)
+    assert data[-1] == {
         u'action': u'test_action',
         u'data': {u'test_data': u'test'},
         u'kind': u'notification',
         u'module': u'test_module',
+    }
+    ubus_notify.notify("maintain", "reboot_required")
+    data = read_listener_output(data)
+    assert data[-1] == {
+        u'action': u'reboot_required',
+        u'kind': u'notification',
+        u'module': u'maintain'
     }

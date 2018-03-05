@@ -28,9 +28,11 @@ from .base import BaseSender, BaseListener
 
 logger = logging.getLogger(__name__)
 
+
 def _chunks(data, size):
     for i in range(0, len(data), size):
         yield data[i:i + size]
+
 
 class UbusSender(BaseSender):
 
@@ -150,8 +152,10 @@ class UbusListener(BaseListener):
                 "module": module_name,
                 "kind": "notification",
                 "action": data["action"],
-                "data": data["data"],
             }
+            msg_data = data.get("data", None)
+            if msg_data:
+                msg["data"] = msg_data
             logger.debug("Notification recieved %s." % msg)
             self.handler(msg)
 

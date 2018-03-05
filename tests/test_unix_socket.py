@@ -74,12 +74,19 @@ def test_notifications_request(unix_listener, unix_socket_client):
 
 def test_notifications_cmd(unix_listener, unix_notify):
     _, read_listener_output = unix_listener
-    old_data = read_listener_output()
+    data = read_listener_output()
     unix_notify.notify("test_module", "test_action", {"test_data": "test"})
-    last = read_listener_output(old_data)[-1]
-    assert last == {
+    data = read_listener_output(data)
+    assert data[-1] == {
         u'action': u'test_action',
         u'data': {u'test_data': u'test'},
         u'kind': u'notification',
         u'module': u'test_module',
+    }
+    unix_notify.notify("maintain", "reboot_required")
+    data = read_listener_output(data)
+    assert data[-1] == {
+        u'action': u'reboot_required',
+        u'kind': u'notification',
+        u'module': u'maintain'
     }

@@ -91,17 +91,17 @@ class UbusSender(BaseSender):
         if len(dumped_data) > 512 * 1024:
             for data_part in _chunks(dumped_data, 512 * 1024):
                 ubus.call(ubus_object, action, {
-                    "data": {}, "final": False, "multipart": True,
-                    "request_id": request_id, "multipart_data": data_part,
+                    "payload": {"multipart_data": data_part},
+                    "final": False, "multipart": True, "request_id": request_id
                 })
             res = ubus.call(ubus_object, action, {
-                "data": {}, "final": True, "multipart": True,
-                "request_id": request_id, "multipart_data": "",
+                "payload": {"multipart_data": ""},
+                "final": True, "multipart": True, "request_id": request_id,
             })
         else:
             res = ubus.call(ubus_object, action, {
-                "data": data if data else {}, "final": True, "multipart": False,
-                "request_id": request_id, "multipart_data": "",
+                "payload": {"data": data} if data is not None else {},
+                "final": True, "multipart": False, "request_id": request_id
             })
 
         raw_response = "".join([e["data"] for e in res])

@@ -16,7 +16,12 @@ test:
     - (git checkout refs/remotes/origin/${CI_COMMIT_REF_NAME} || true)
     - python setup.py install
     - cd ..
+    - git clone https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git
+    - cd foris-controller-testtools
+    - (git checkout refs/remotes/origin/${CI_COMMIT_REF_NAME} || true)
+    - pip install .
+    - cd ..
     - python setup.py install
-    - rm -rf {foris-controller,foris-schema}
+    - rm -rf {foris-controller,foris-schema,foris-controller-testtools}
     - export LD_LIBRARY_PATH=:/usr/local/lib
     - python setup.py test

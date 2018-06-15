@@ -19,7 +19,6 @@
 
 import json
 import logging
-import os
 import socket
 import struct
 import sys
@@ -73,8 +72,7 @@ class UnixSocketSender(BaseSender):
         :param timeout: timeout for the request in ms (0=wait forever)
         :returns: reply
         """
-        timeout = self.default_timeout if timeout is None else timeout
-        timeout = _normalize_timeout(timeout)
+        timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
         message = {
             "kind": "request",
             "module": module,
@@ -90,10 +88,10 @@ class UnixSocketSender(BaseSender):
         self.sock.sendall(length_bytes + raw_message)
         logger.debug("Message was send. Waiting for response.")
 
+        self.sock.settimeout(timeout)
         length = struct.unpack("I", self.sock.recv(4))[0]
         logger.debug("Response length = %d." % length)
 
-        self.sock.settimeout(timeout)
         received = self.sock.recv(length)
         recv_len = len(received)
         while recv_len < length:

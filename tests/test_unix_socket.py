@@ -43,21 +43,24 @@ def test_long_messages(unix_listener, unix_socket_client):
 
 def test_nonexisting_module(unix_listener, unix_socket_client):
     with pytest.raises(ControllerError):
-        response = unix_socket_client.send("non-existing", "get", None)
+        unix_socket_client.send("non-existing", "get", None)
 
 
 def test_nonexisting_action(unix_listener, unix_socket_client):
     with pytest.raises(ControllerError):
-        response = unix_socket_client.send("about", "non-existing", None)
+        unix_socket_client.send("about", "non-existing", None)
+
 
 def test_extra_data(unix_listener, unix_socket_client):
     with pytest.raises(ControllerError):
-        response = unix_socket_client.send("about", "get", {})
+        unix_socket_client.send("about", "get", {})
+
 
 def test_timeout(unix_listener, unix_socket_client):
     unix_socket_client.send("about", "get", None, timeout=1000)
     sender = UnixSocketSender(SOCK_PATH, default_timeout=1000)
     sender.send("about", "get", None)
+
 
 def test_notifications_request(unix_listener, unix_socket_client):
     _, read_listener_output = unix_listener

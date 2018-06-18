@@ -45,9 +45,9 @@ class BaseSender(object):
     def disconnect(self):
         raise NotImplementedError()
 
-    def _raise_exception_on_error(self, data):
-        if "errors" in data:
-            raise ControllerError(data["errors"])
+    def _raise_exception_on_error(self, msg):
+        if "errors" in msg:
+            raise ControllerError(msg["errors"])
 
 
 class BaseListener(object):

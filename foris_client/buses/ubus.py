@@ -112,7 +112,7 @@ class UbusSender(BaseSender):
         # Raise exception on error
         self._raise_exception_on_error(response)
 
-        return response
+        return response.get("data", None)
 
     def disconnect(self):
         if ubus.get_connected():

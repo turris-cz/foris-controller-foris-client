@@ -24,13 +24,14 @@ import struct
 import sys
 import threading
 
+from .base import BaseSender, BaseListener
+
 if sys.version_info < (3, 0):
     import SocketServer
 else:
     import socketserver
     SocketServer = socketserver
 
-from .base import BaseSender, BaseListener
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,6 @@ def _normalize_timeout(timeout):
 
 
 class UnixSocketSender(BaseSender):
-
 
     def connect(self, socket_path, default_timeout=0):
         """ connects to unix-socket
@@ -101,12 +101,12 @@ class UnixSocketSender(BaseSender):
 
         logger.debug("Message received: %s", received)
 
-        res = json.loads(received.decode("utf8")).get("data", {})
+        res = json.loads(received.decode("utf8"))
 
         # Raise exception on error
         self._raise_exception_on_error(res)
 
-        return res
+        return res.get("data", None)
 
     def disconnect(self):
         logger.debug("Closing connection.")

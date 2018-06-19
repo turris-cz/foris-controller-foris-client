@@ -1,3 +1,10 @@
+0.7 (2018-06-19)
+----------------
+
+* reflect foris-schema api update
+* unix-socket: timeout fixes
+* ubus: message format updates
+
 0.6 (2018-03-05)
 ----------------
 

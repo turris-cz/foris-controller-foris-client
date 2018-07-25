@@ -24,6 +24,8 @@ import logging
 import json
 import os
 
+from foris_client import __version__
+
 logger = logging.getLogger("foris_listener")
 
 LOGGER_MAX_LEN = 10000
@@ -33,6 +35,7 @@ if __name__ == "__main__":
     # Parse the command line options
     parser = argparse.ArgumentParser(prog="foris-listener")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False)
+    parser.add_argument('--version', action='version', version=__version__)
 
     parser.add_argument(
         "-o", "--output", dest="output", default=None, type=str, metavar="OUTPUT_FILE",

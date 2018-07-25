@@ -23,14 +23,16 @@ import argparse
 import logging
 import json
 
-logger = logging.getLogger("foris_client")
+from foris_client import __version__
 
+logger = logging.getLogger("foris_client")
 
 if __name__ == "__main__":
 
     # Parse the command line options
     parser = argparse.ArgumentParser(prog="foris-client")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False)
+    parser.add_argument('--version', action='version', version=__version__)
 
     input_group = parser.add_mutually_exclusive_group()
     input_group.add_argument(

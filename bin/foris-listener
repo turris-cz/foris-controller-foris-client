@@ -68,6 +68,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.DEBUG, format=logging_format)
     else:
         logging.basicConfig(format=logging_format)
+    logger.debug("Version %s" % __version__)
 
     if options.log_file:
         handler = logging.FileHandler(options.log_file)

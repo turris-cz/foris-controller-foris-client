@@ -72,6 +72,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig()
+    logger.debug("Version %s" % __version__)
 
     if options.bus == "ubus":
         from foris_client.buses.ubus import UbusSender

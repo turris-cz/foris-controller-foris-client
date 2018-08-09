@@ -2,7 +2,7 @@
 
 #
 # foris-client
-# Copyright (C) 2017 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2018 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,8 +30,8 @@ logger = logging.getLogger("foris_listener")
 
 LOGGER_MAX_LEN = 10000
 
-if __name__ == "__main__":
 
+def main():
     # Parse the command line options
     parser = argparse.ArgumentParser(prog="foris-listener")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False)
@@ -113,3 +113,7 @@ if __name__ == "__main__":
     finally:
         if f:
             f.close()
+
+
+if __name__ == "__main__":
+    main()

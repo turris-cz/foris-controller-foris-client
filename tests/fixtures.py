@@ -134,7 +134,7 @@ def unix_listener(request):
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
     process = subprocess.Popen([
-        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
+        "foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
         "unix-socket", "--path", NOTIFICATIONS_SOCK_PATH
     ], **kwargs)
 
@@ -224,7 +224,7 @@ def ubus_listener(request):
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
     process = subprocess.Popen([
-        "bin/foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
+        "foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
         "ubus", "--path", UBUS_PATH
     ], **kwargs)
 

@@ -33,9 +33,10 @@ setup(
     author_email='stepan.henek@nic.cz',
     packages=[
         'foris_client',
+        'foris_client.client',
+        'foris_client.listener',
         'foris_client.buses',
     ],
-    scripts=['bin/foris-client', 'bin/foris-listener'],
     url='https://gitlab.labs.nic.cz/turris/foris-client',
     license='COPYING',
     description=DESCRIPTION,
@@ -48,4 +49,10 @@ setup(
     tests_require=[
         'pytest',
     ],
+    entry_points={
+        "console_scripts": [
+            "foris-client = foris_client.client.__main__:main",
+            "foris-listener = foris_client.listener.__main__:main",
+        ]
+    },
 )

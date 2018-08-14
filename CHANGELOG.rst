@@ -1,3 +1,10 @@
+0.8 (2018-08-14)
+----------------
+
+* using entry points for scripts
+* CI - test on both python2 and python3 images
+* --version argument adn print version into debug console
+
 0.7 (2018-06-19)
 ----------------
 

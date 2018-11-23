@@ -41,14 +41,22 @@ setup(
     license='COPYING',
     description=DESCRIPTION,
     long_description=open('README.rst').read(),
-    requires=[
+    install_requires=[
+        "ubus @ git+https://gitlab.labs.nic.cz/turris/python-ubus.git",
     ],
     setup_requires=[
         'pytest-runner',
     ],
     tests_require=[
         'pytest',
+        'foris-controller',
     ],
+    extras_require={
+        'testsuite': [
+            "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller.git",
+            "foris-controller-testtools @ git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git",
+        ]
+    },
     entry_points={
         "console_scripts": [
             "foris-client = foris_client.client.__main__:main",

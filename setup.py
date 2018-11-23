@@ -53,8 +53,8 @@ setup(
     ],
     extras_require={
         'testsuite': [
-            "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller.git",
-            "foris-controller-testtools @ git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git",
+            "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller.git@PEP508#egg=foris-controller",
+            "foris-controller-testtools @ git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git@PEP508#egg=foris-controller-testtools",
         ]
     },
     entry_points={

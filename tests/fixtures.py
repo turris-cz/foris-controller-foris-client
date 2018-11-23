@@ -96,6 +96,8 @@ def ubus_controller(request, ubusd_test):
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
 
+    os.environ["FC_UPDATER_MODULE"] = "foris_controller_testtools.svupdater"
+
     extra_paths = list(itertools.chain.from_iterable(
         [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
 
@@ -167,6 +169,8 @@ def unix_controller(request):
         devnull = open(os.devnull, 'wb')
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
+
+    os.environ["FC_UPDATER_MODULE"] = "foris_controller_testtools.svupdater"
 
     extra_paths = list(itertools.chain.from_iterable(
         [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))

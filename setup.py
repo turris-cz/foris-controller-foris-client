@@ -63,4 +63,8 @@ setup(
             "foris-listener = foris_client.listener.__main__:main",
         ]
     },
+    dependency_links=[
+        "git+https://gitlab.labs.nic.cz/turris/foris-controller.git#egg=foris-controller",
+    ],
+    zip_safe=False,
 )

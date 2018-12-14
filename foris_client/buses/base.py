@@ -39,7 +39,7 @@ class BaseSender(object):
     def connect(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def send(self, module, action, data):
+    def send(self, module, action, data, timeout=None):
         raise NotImplementedError()
 
     def disconnect(self):

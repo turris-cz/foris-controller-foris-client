@@ -61,10 +61,13 @@ def main():
     )
 
     subparsers = parser.add_subparsers(help="buses", dest="bus")
-    ubus_parser = subparsers.add_parser("ubus", help="use ubus to recieve commands")
+    ubus_parser = subparsers.add_parser("ubus", help="use ubus to send commands")
     ubus_parser.add_argument("--path", dest="path", default='/var/run/ubus.sock')
-    unix_parser = subparsers.add_parser("unix-socket", help="use unix socket to recieve commands")
+    unix_parser = subparsers.add_parser("unix-socket", help="use unix socket to send commands")
     unix_parser.add_argument("--path", dest="path", default='/tmp/foris-controller.soc')
+    mqtt_parser = subparsers.add_parser("mqtt", help="use mqtt to send commands")
+    mqtt_parser.add_argument("--host", dest="host", default='localhost')
+    mqtt_parser.add_argument("--port", dest="port", type=int, default=1883)
 
     options = parser.parse_args()
 
@@ -83,6 +86,11 @@ def main():
         from foris_client.buses.unix_socket import UnixSocketSender
         logger.debug("Using unix-socket to send commands.")
         sender = UnixSocketSender(options.path, options.timeout)
+
+    elif options.bus == "mqtt":
+        from foris_client.buses.mqtt import MqttSender
+        logger.debug("Using mqtt to send commands.")
+        sender = MqttSender(options.host, options.port, options.timeout)
 
     data = None
     if options.input:

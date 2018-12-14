@@ -60,6 +60,9 @@ def main():
     unix_parser = subparsers.add_parser(
         "unix-socket", help="use unix socket to obtain notifications")
     unix_parser.add_argument("--path", dest="path", default='/tmp/foris-controller.soc')
+    mqtt_parser = subparsers.add_parser("mqtt", help="use mqtt to obtain notificatins")
+    mqtt_parser.add_argument("--host", dest="host", default='localhost')
+    mqtt_parser.add_argument("--port", dest="port", type=int, default=1883)
 
     options = parser.parse_args()
 
@@ -108,6 +111,15 @@ def main():
             except OSError:
                 pass
             listener = UnixSocketListener(options.path, handler, options.module, options.timeout)
+
+        elif options.bus == "mqtt":
+            from foris_client.buses.mqtt import MqttListener
+            logger.debug("Using mqtt to listen for notifications.")
+            listener = MqttListener(
+                options.host, options.port, handler,
+                options.module, options.timeout
+            )
+
 
         listener.listen()
     finally:

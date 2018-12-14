@@ -23,18 +23,39 @@ import os
 import pytest
 import subprocess
 import time
+import uuid
 
+
+MQTT_HOST = "localhost"
+MQTT_PORT = 11883
+MQTT_ID = os.environ.get("TEST_CLIENT_ID", "%012x" % uuid.getnode())
 
 SOCK_PATH = "/tmp/foris-client-test.soc"
 NOTIFICATIONS_SOCK_PATH = "/tmp/foris-client-notifications-test.soc"
 NOTIFICATIONS_OUTPUT_PATH = "/tmp/foris-client-notifications-test.json"
 UBUS_PATH = "/tmp/ubus-foris-client-test.soc"
 UBUS_PATH2 = "/tmp/ubus-foris-client-test2.soc"
-LISTENER_LOG = "/tmp/ubus-foris-client-listener.txt"
+LISTENER_LOG = "/tmp/foris-client-listener.txt"
 
 EXTRA_MODULE_PATHS = [
     os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_modules", "echo")
 ]
+
+
+def wait_for_mqtt_ready():
+    from paho.mqtt import client as mqtt
+
+    def on_connect(client, userdata, flags, rc):
+        client.subscribe("foris-controller/started")
+
+    def on_message(client, userdata, msg):
+        client.loop_stop(True)
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_HOST, MQTT_PORT, 30)
+    client.loop_start()
+    client._thread.join(5)
 
 
 def read_listener_output(old_data=None):
@@ -49,6 +70,13 @@ def read_listener_output(old_data=None):
             break
 
     return last_data
+
+@pytest.fixture(scope="session")
+def mosquitto_test():
+    mosquitto_path = os.environ.get("MOSQUITTO_PATH", "/usr/sbin/mosquitto")
+    mosquitto_instance = subprocess.Popen([mosquitto_path, "-v", "-p", str(MQTT_PORT)])
+    yield mosquitto_instance
+    mosquitto_instance.kill()
 
 
 @pytest.fixture(scope="session")
@@ -96,17 +124,49 @@ def ubus_controller(request, ubusd_test):
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
 
-    os.environ["FC_UPDATER_MODULE"] = "foris_controller_testtools.svupdater"
+    extra_paths = list(itertools.chain.from_iterable(
+        [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
+
+    env_dict = dict(os.environ)
+    env_dict['FC_UPDATER_MODULE'] = "foris_controller_testtools.svupdater"
+    kwargs['env'] = env_dict
+
+    process = subprocess.Popen(
+        [
+            "python", "-m", "foris_controller.controller", "-d", "-m", "about", "-m", "web",
+            "-m", "echo", "-m", "maintain",
+            "--backend", "mock"
+        ] + extra_paths + ["ubus", "--path", UBUS_PATH],
+        **kwargs
+    )
+    yield process
+
+    process.kill()
+
+
+@pytest.fixture(scope="session")
+def mqtt_controller(request, mosquitto_test):
+
+    kwargs = {}
+    if not request.config.getoption("--debug-output"):
+        devnull = open(os.devnull, 'wb')
+        kwargs['stderr'] = devnull
+        kwargs['stdout'] = devnull
 
     extra_paths = list(itertools.chain.from_iterable(
         [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
 
+    env_dict = dict(os.environ)
+    env_dict['FC_UPDATER_MODULE'] = "foris_controller_testtools.svupdater"
+    kwargs['env'] = env_dict
+
     process = subprocess.Popen(
         [
-            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo", "-m", "maintain",
+            "python", "-m", "foris_controller.controller", "-d", "-m", "about", "-m", "web",
+            "-m", "echo", "-m", "maintain",
             "--backend", "mock"
-        ] + extra_paths + ["ubus", "--path", UBUS_PATH]
-        , **kwargs
+        ] + extra_paths + ["mqtt", "--host", MQTT_HOST, "--port", str(MQTT_PORT)],
+        **kwargs
     )
     yield process
 
@@ -117,17 +177,17 @@ def ubus_controller(request, ubusd_test):
 def unix_listener(request):
     try:
         os.unlink(NOTIFICATIONS_SOCK_PATH)
-    except:
+    except Exception:
         pass
 
     try:
         os.unlink(NOTIFICATIONS_OUTPUT_PATH)
-    except:
+    except Exception:
         pass
 
     try:
         os.unlink(LISTENER_LOG)
-    except:
+    except Exception:
         pass
 
     kwargs = {"preexec_fn": lambda: os.environ.update(PYTHONUNBUFFERED="1")}
@@ -151,7 +211,43 @@ def unix_listener(request):
 
     try:
         os.unlink(LISTENER_LOG)
-    except:
+    except Exception:
+        pass
+
+    process.kill()
+
+
+@pytest.fixture(scope="session")
+def mqtt_listener(request, mosquitto_test):
+    try:
+        os.unlink(LISTENER_LOG)
+    except Exception:
+        pass
+
+    kwargs = {}
+    if not request.config.getoption("--debug-output"):
+        devnull = open(os.devnull, 'wb')
+        kwargs['stderr'] = devnull
+        kwargs['stdout'] = devnull
+    args = [
+        "python", "-m", "foris_client.listener", "-d",
+        "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
+        "mqtt", "--host", MQTT_HOST, "--port", str(MQTT_PORT),
+    ]
+    process = subprocess.Popen(args, **kwargs)
+
+    while True:
+        if os.path.exists(LISTENER_LOG):
+            with open(LISTENER_LOG) as f:
+                if "Starting to listen" in f.read():
+                    break
+        time.sleep(0.3)
+
+    yield process, read_listener_output
+
+    try:
+        os.unlink(LISTENER_LOG)
+    except Exception:
         pass
 
     process.kill()
@@ -161,7 +257,7 @@ def unix_listener(request):
 def unix_controller(request):
     try:
         os.unlink(SOCK_PATH)
-    except:
+    except Exception:
         pass
 
     kwargs = {}
@@ -170,14 +266,17 @@ def unix_controller(request):
         kwargs['stderr'] = devnull
         kwargs['stdout'] = devnull
 
-    os.environ["FC_UPDATER_MODULE"] = "foris_controller_testtools.svupdater"
+    env_dict = dict(os.environ)
+    env_dict['FC_UPDATER_MODULE'] = "foris_controller_testtools.svupdater"
+    kwargs['env'] = env_dict
 
     extra_paths = list(itertools.chain.from_iterable(
         [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
 
     process = subprocess.Popen(
         [
-            "foris-controller", "-d", "-m", "about", "-m", "web", "-m", "echo", "-m", "maintain",
+            "python", "-m", "foris_controller.controller", "-d",
+            "-m", "about", "-m", "web", "-m", "echo", "-m", "maintain",
             "--backend", "mock",
         ] + extra_paths + [
             "unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH
@@ -210,16 +309,27 @@ def unix_socket_client(unix_controller):
     sender.disconnect()
 
 
+@pytest.fixture(scope="function")
+def mqtt_client(mosquitto_test, mqtt_controller):
+    # wait for started notification or wait for 5 seconds
+    wait_for_mqtt_ready()
+
+    from foris_client.buses.mqtt import MqttSender
+    sender = MqttSender(MQTT_HOST, MQTT_PORT)
+    yield sender
+    sender.disconnect()
+
+
 @pytest.fixture(scope="session")
 def ubus_listener(request):
     try:
         os.unlink(NOTIFICATIONS_OUTPUT_PATH)
-    except:
+    except Exception:
         pass
 
     try:
         os.unlink(LISTENER_LOG)
-    except:
+    except Exception:
         pass
 
     kwargs = {"preexec_fn": lambda: os.environ.update(PYTHONUNBUFFERED="1")}
@@ -241,7 +351,7 @@ def ubus_listener(request):
 
     try:
         os.unlink(LISTENER_LOG)
-    except:
+    except Exception:
         pass
 
     yield process, read_listener_output
@@ -264,5 +374,16 @@ def ubus_notify(ubus_listener):
     while not os.path.exists(UBUS_PATH):
         time.sleep(0.2)
     sender = UbusNotificationSender(UBUS_PATH)
+    yield sender
+    sender.disconnect()
+
+
+@pytest.fixture(scope="function")
+def mqtt_notify(mqtt_listener):
+    from foris_controller.buses.mqtt import MqttNotificationSender
+
+    wait_for_mqtt_ready()
+
+    sender = MqttNotificationSender(MQTT_HOST, MQTT_PORT)
     yield sender
     sender.disconnect()

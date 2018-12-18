@@ -46,10 +46,15 @@ def wait_for_mqtt_ready():
     from paho.mqtt import client as mqtt
 
     def on_connect(client, userdata, flags, rc):
-        client.subscribe("foris-controller/started")
+        client.subscribe("foris-controller/advertize")
 
     def on_message(client, userdata, msg):
-        client.loop_stop(True)
+        try:
+            if json.loads(msg.payload)["state"] in ["started", "running"]:
+                client.loop_stop(True)
+        except Exception:
+            pass
+
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message

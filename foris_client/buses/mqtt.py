@@ -124,6 +124,7 @@ class MqttListener(BaseListener):
 
         def on_disconnect(client, userdata, rc):
             logger.debug("Listener Disconnected.")
+            self.connected = False
 
         def on_connect(client, userdata, flags, rc):
             listen_topic = "foris-controller/%s/notification/%s/action/+" % (
@@ -165,6 +166,6 @@ class MqttListener(BaseListener):
 
         logger.debug("Starting to listen.")
         self.client.loop(self.timeout)
-        while not self.timeout:  # loop forever when timeout == 0.0
-            self.client.loop(30.0)
+        while not self.timeout and self.connected:  # loop forever when timeout == 0.0
+            self.client.loop(5.0)
         logger.debug("Listening stopped")

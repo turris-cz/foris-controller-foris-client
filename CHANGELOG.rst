@@ -1,3 +1,9 @@
+0.9 (2018-12-21)
+----------------
+
+* mqtt bus support implemented
+* PEP508 dependencies
+
 0.8 (2018-08-14)
 ----------------
 

@@ -83,6 +83,9 @@ class MqttSender(BaseSender):
 
         self.client.connect(host, port, 30)
 
+        # Start the loop to keep the connection alive
+        self.client.loop_start()
+
     def disconnect(self):
         logger.debug("Sender Disconnected.")
         self.client.disconnect()
@@ -101,7 +104,7 @@ class MqttSender(BaseSender):
             self.passed = False
             self.client.subscribe(reply_topic)
             self.client.loop_start()
-            self.client._thread.join(30)
+            self.client._thread.join(timeout or None)  # 0.0 -> None - wait forever
             self.client.loop_stop(True)
 
             if self.passed:
@@ -114,6 +117,9 @@ class MqttSender(BaseSender):
 
             if not self.passed:
                 raise RuntimeError("Timeout occured")
+
+            # start the loop again to keep the connection alive
+            self.client.loop_start()
 
         # raise exception on error
         self._raise_exception_on_error(result)

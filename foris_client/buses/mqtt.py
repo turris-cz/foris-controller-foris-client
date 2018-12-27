@@ -42,7 +42,9 @@ class MqttSender(BaseSender):
         self.lock = threading.Lock()
         super(MqttSender, self).__init__(*args, **kwargs)
 
-    def connect(self, host, port):
+    def connect(self, host, port, default_timeout=None):
+        self.default_timeout = _normalize_timeout(default_timeout)
+
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
 
@@ -86,7 +88,7 @@ class MqttSender(BaseSender):
         self.client.disconnect()
 
     def send(self, module, action, data, timeout=None):
-        timeout = _normalize_timeout(timeout)
+        timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
         msg_id = uuid.uuid1()
         publish_topic = "foris-controller/%s/request/%s/action/%s" % (
             ID, module, action,

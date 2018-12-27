@@ -1,3 +1,9 @@
+0.9.2 (2018-12-27)
+------------------
+
+* mqtt: MqttSender will keep the connection persistent
+* mqtt: timeout fixes
+
 0.9.1 (2018-12-21)
 ------------------
 

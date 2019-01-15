@@ -21,6 +21,7 @@ import logging
 import uuid
 import json
 import threading
+import time
 
 from .base import BaseSender, BaseListener
 
@@ -141,7 +142,7 @@ class MqttListener(BaseListener):
             rc, mid = client.subscribe(listen_topic)
             if rc != 0:
                 logger.error("Failed to subscribe to '%s'", listen_topic)
-            logger.debug("Subscirbing to '%s' (mid=%d)", listen_topic, mid)
+            logger.debug("Subscribing to '%s' (mid=%d)", listen_topic, mid)
             self.connected = True
 
         def on_subscribe(client, userdata, mid, granted_qos):
@@ -169,11 +170,11 @@ class MqttListener(BaseListener):
         self.client.disconnect()
 
     def listen(self):
-        while not self.connected:
-            self.client.loop(0.2)
-
         logger.debug("Starting to listen.")
-        self.client.loop(self.timeout)
-        while not self.timeout and self.connected:  # loop forever when timeout == 0.0
-            self.client.loop(5.0)
+        if self.timeout:
+            self.client.loop_start()
+            self.client._thread.join(self.timeout)
+            self.client.loop_stop()
+        else:
+            self.client.loop_forever()
         logger.debug("Listening stopped")

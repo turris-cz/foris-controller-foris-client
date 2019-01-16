@@ -2,7 +2,7 @@
 
 #
 # foris-client
-# Copyright (C) 2018 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2019 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 import argparse
 import logging
 import json
+import uuid
 
 from foris_client import __version__
 
@@ -68,6 +69,14 @@ def main():
     mqtt_parser = subparsers.add_parser("mqtt", help="use mqtt to send commands")
     mqtt_parser.add_argument("--host", dest="host", default='localhost')
     mqtt_parser.add_argument("--port", dest="port", type=int, default=1883)
+    mqtt_parser.add_argument(
+        "--tls-files", nargs=3, default=[], metavar=("CA_CRT_FILE", "CRT_FILE", "KEY_FILE"),
+        help="Set a paths to TLS files to access mqtt via encrypted connection."
+    )
+    mqtt_parser.add_argument(
+        "--controller-id", default="%012x" % uuid.getnode(),
+        help="sets which controller on the messages bus should be configured",
+    )
 
     options = parser.parse_args()
 
@@ -90,7 +99,11 @@ def main():
     elif options.bus == "mqtt":
         from foris_client.buses.mqtt import MqttSender
         logger.debug("Using mqtt to send commands.")
-        sender = MqttSender(options.host, options.port, options.timeout)
+        sender = MqttSender(
+            options.host, options.port, options.timeout,
+            tls_files=options.tls_files,
+            controller_id=options.controller_id,
+        )
 
     data = None
     if options.input:

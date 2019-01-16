@@ -1,6 +1,6 @@
 #
 # foris-client
-# Copyright (C) 2018 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2019 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@ import uuid
 import json
 import threading
 import time
+import ssl
 
 from .base import BaseSender, BaseListener, ControllerMissing
 
@@ -48,8 +49,13 @@ class MqttSender(BaseSender):
         self.announcer_check_last = time.time()
         super(MqttSender, self).__init__(*args, **kwargs)
 
-    def connect(self, host, port, default_timeout=None):
+    def connect(
+        self, host, port, default_timeout=None, tls_files=[],
+        controller_id="%012x" % uuid.getnode()
+    ):
         self.default_timeout = _normalize_timeout(default_timeout)
+        self.tls_files = tls_files
+        self.controller_id = controller_id
 
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
@@ -72,7 +78,7 @@ class MqttSender(BaseSender):
             if msg.topic == ANNOUNCER_TOPIC:
                 try:
                     parsed = json.loads(msg.payload)
-                    if ID == parsed["id"]:
+                    if self.controller_id == parsed["id"]:
                         self.announcer_check_last = time.time()
                 except ValueError:
                     logger.error("Announcement not in JSON format.")
@@ -96,6 +102,16 @@ class MqttSender(BaseSender):
             logger.debug("Sender Disconnected.")
 
         self.client = mqtt.Client()
+        if self.tls_files:
+            ca_path, cert_path, key_path = self.tls_files
+            context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+            context.load_cert_chain(cert_path, key_path)
+            context.load_verify_locations(ca_path)
+            context.verify_mode = ssl.CERT_REQUIRED
+            # can't assume that server cert is issued to particular hostname/ipaddress
+            context.check_hostname = False
+            self.client.tls_set_context(context)
+
         self.client.on_connect = on_connect
         self.client.on_subscribe = on_subscribe
         self.client.on_message = on_message
@@ -114,9 +130,9 @@ class MqttSender(BaseSender):
         timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
         msg_id = uuid.uuid1()
         publish_topic = "foris-controller/%s/request/%s/action/%s" % (
-            ID, module, action,
+            self.controller_id, module, action,
         )
-        reply_topic = "foris-controller/%s/reply/%s" % (ID, msg_id,)
+        reply_topic = "foris-controller/%s/reply/%s" % (self.controller_id, msg_id,)
         with self.lock:
             self.reply_topic = reply_topic
             self.data = data
@@ -131,14 +147,16 @@ class MqttSender(BaseSender):
                     if self.passed:
                         break
                 if not self.passed:
-                    raise ControllerMissing(ID)  # announcments lost -> missing controller
+                    # announcements lost -> missing controller
+                    raise ControllerMissing(self.controller_id)
             else:
                 for i in range(int(timeout / ANNOUNCER_PERIOD_REQUIRED)):
                     self.client._thread.join(ANNOUNCER_PERIOD_REQUIRED)
                     if self.passed:
                         break
                     if time.time() - self.announcer_check_last > ANNOUNCER_PERIOD_REQUIRED:
-                        raise ControllerMissing(ID)  # announcments lost -> missing controller
+                        # announcements lost -> missing controller
+                        raise ControllerMissing(self.controller_id)
 
                 # last part of timeout
                 last_period = timeout % ANNOUNCER_PERIOD_REQUIRED
@@ -168,7 +186,12 @@ class MqttSender(BaseSender):
 
 
 class MqttListener(BaseListener):
-    def connect(self, host, port, handler, module=None, timeout=0):
+    def connect(
+        self, host, port, handler, module=None, timeout=0, tls_files=[],
+        controller_id="%012x" % uuid.getnode(),
+    ):
+        self.controller_id = controller_id
+        self.tls_files = tls_files
 
         def on_disconnect(client, userdata, rc):
             logger.debug("Listener Disconnected.")
@@ -176,7 +199,7 @@ class MqttListener(BaseListener):
 
         def on_connect(client, userdata, flags, rc):
             listen_topic = "foris-controller/%s/notification/%s/action/+" % (
-                ID, module if module else "+"
+                self.controller_id, module if module else "+"
             )
             rc, mid = client.subscribe(listen_topic)
             if rc != 0:
@@ -196,6 +219,17 @@ class MqttListener(BaseListener):
             handler(parsed)
 
         self.client = mqtt.Client()
+
+        if self.tls_files:
+            ca_path, cert_path, key_path = self.tls_files
+            context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+            context.load_cert_chain(cert_path, key_path)
+            context.load_verify_locations(ca_path)
+            context.verify_mode = ssl.CERT_REQUIRED
+            # can't assume that server cert is issued to particular hostname/ipaddress
+            context.check_hostname = False
+            self.client.tls_set_context(context)
+
         self.client.on_connect = on_connect
         self.client.on_subscribe = on_subscribe
         self.client.on_message = on_message

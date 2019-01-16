@@ -32,6 +32,13 @@ class ControllerError(Exception):
         self.errors = errors
 
 
+class ControllerMissing(Exception):
+    def __init__(self, device_id):
+        self.device_id = device_id
+        super(ControllerMissing, self).__init__(
+            "Connection to controller (%s) is lost." % device_id)
+
+
 class BaseSender(object):
     def __init__(self, *args, **kwargs):
         self.connect(*args, **kwargs)

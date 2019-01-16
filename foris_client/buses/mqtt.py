@@ -23,10 +23,13 @@ import json
 import threading
 import time
 
-from .base import BaseSender, BaseListener
+from .base import BaseSender, BaseListener, ControllerMissing
 
 from paho.mqtt import client as mqtt
 
+
+ANNOUNCER_TOPIC = "foris-controller/advertize"
+ANNOUNCER_PERIOD_REQUIRED = 5.0  # in seconds
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +44,8 @@ class MqttSender(BaseSender):
 
     def __init__(self, *args, **kwargs):
         self.lock = threading.Lock()
+        self.announcer_check_mid = None
+        self.announcer_check_last = time.time()
         super(MqttSender, self).__init__(*args, **kwargs)
 
     def connect(self, host, port, default_timeout=None):
@@ -48,27 +53,41 @@ class MqttSender(BaseSender):
 
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
+            rc, mid = client.subscribe(ANNOUNCER_TOPIC)
+            if rc == mqtt.MQTT_ERR_SUCCESS:
+                self.announcer_check_mid = mid
+                logger.debug("Subscribing to announcer (mid=%d).", self.announcer_check_mid)
 
         def on_subscribe(client, userdata, mid, granted_qos):
             logger.debug("Subscribed to %d.", mid)
-            msg = {"reply_topic": self.reply_topic}
-            if self.data is not None:
-                msg["data"] = self.data
+            if mid != self.announcer_check_mid:
+                msg = {"reply_topic": self.reply_topic}
+                if self.data is not None:
+                    msg["data"] = self.data
 
-            client.publish(self.publish_topic, json.dumps(msg))
+                client.publish(self.publish_topic, json.dumps(msg))
 
         def on_message(client, userdata, msg):
             logger.debug("Msg recieved for '%s' (msg=%s", msg.topic, msg.payload)
-            try:
-                parsed = json.loads(msg.payload)
-                self.result = parsed
-                self.passed = True
-            except ValueError:
-                logger.error("Reply is not in JSON format.")
-                return
+            if msg.topic == ANNOUNCER_TOPIC:
+                try:
+                    parsed = json.loads(msg.payload)
+                    if ID == parsed["id"]:
+                        self.announcer_check_last = time.time()
+                except ValueError:
+                    logger.error("Announcement not in JSON format.")
+                    return
+            else:
+                try:
+                    parsed = json.loads(msg.payload)
+                    self.result = parsed
+                    self.passed = True
+                except ValueError:
+                    logger.error("Reply is not in JSON format.")
+                    return
 
-            client.unsubscribe(self.reply_topic)
-            client.loop_stop()
+                client.unsubscribe(self.reply_topic)
+                client.loop_stop()
 
         def on_unsubscribe(client, userdata, mid):
             logger.debug("Unsubscribing from %d.", mid)
@@ -105,7 +124,27 @@ class MqttSender(BaseSender):
             self.passed = False
             self.client.subscribe(reply_topic)
             self.client.loop_start()
-            self.client._thread.join(timeout or None)  # 0.0 -> None - wait forever
+
+            if not timeout:  # wait forever
+                while time.time() - self.announcer_check_last <= ANNOUNCER_PERIOD_REQUIRED:
+                    self.client._thread.join(ANNOUNCER_PERIOD_REQUIRED)
+                    if self.passed:
+                        break
+                if not self.passed:
+                    raise ControllerMissing(ID)  # announcments lost -> missing controller
+            else:
+                for i in range(int(timeout / ANNOUNCER_PERIOD_REQUIRED)):
+                    self.client._thread.join(ANNOUNCER_PERIOD_REQUIRED)
+                    if self.passed:
+                        break
+                    if time.time() - self.announcer_check_last > ANNOUNCER_PERIOD_REQUIRED:
+                        raise ControllerMissing(ID)  # announcments lost -> missing controller
+
+                # last part of timeout
+                last_period = timeout % ANNOUNCER_PERIOD_REQUIRED
+                if not self.passed and last_period:
+                    self.client._thread.join(last_period)
+
             self.client.loop_stop(True)
 
             if self.passed:

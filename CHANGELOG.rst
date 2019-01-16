@@ -1,3 +1,10 @@
+0.9.3 (2019-01-16)
+------------------
+
+* foris-listener,foris-client: add support for tls encrypted connections
+* mqtt: handle situation when the controller is disconnected
+* mqtt: handle reconnects
+
 0.9.2 (2018-12-27)
 ------------------
 

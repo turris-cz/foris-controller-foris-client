@@ -46,7 +46,7 @@ def wait_for_mqtt_ready():
     from paho.mqtt import client as mqtt
 
     def on_connect(client, userdata, flags, rc):
-        client.subscribe("foris-controller/advertize")
+        client.subscribe(f"foris-controller/{MQTT_ID}/notification/remote/action/advertize")
 
     def on_message(client, userdata, msg):
         try:
@@ -146,7 +146,7 @@ def ubus_controller(request, ubusd_test):
     process = subprocess.Popen(
         [
             "python", "-m", "foris_controller.controller", "-d", "-m", "about", "-m", "web",
-            "-m", "echo", "-m", "maintain",
+            "-m", "echo", "-m", "maintain", "-m", "remote",
             "--backend", "mock"
         ] + extra_paths + ["ubus", "--path", UBUS_PATH],
         **kwargs
@@ -175,7 +175,7 @@ def mqtt_controller(request, mosquitto_test):
     process = subprocess.Popen(
         [
             "python", "-m", "foris_controller.controller", "-d", "-m", "about", "-m", "web",
-            "-m", "echo", "-m", "maintain",
+            "-m", "echo", "-m", "maintain", "-m", "remote",
             "--backend", "mock"
         ] + extra_paths + ["mqtt", "--host", MQTT_HOST, "--port", str(MQTT_PORT)],
         **kwargs
@@ -287,7 +287,7 @@ def unix_controller(request):
 
     process = subprocess.Popen(
         [
-            "python", "-m", "foris_controller.controller", "-d",
+            "python", "-m", "foris_controller.controller", "-d", "-m", "remote",
             "-m", "about", "-m", "web", "-m", "echo", "-m", "maintain",
             "--backend", "mock",
         ] + extra_paths + [

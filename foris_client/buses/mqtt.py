@@ -31,7 +31,6 @@ from paho.mqtt import client as mqtt
 from typing import Optional
 
 
-ANNOUNCER_TOPIC = "foris-controller/advertize"
 ANNOUNCER_PERIOD_REQUIRED = 5.0  # in seconds
 
 logger = logging.getLogger(__name__)
@@ -58,7 +57,8 @@ class MqttSender(BaseSender):
 
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
-            rc, mid = client.subscribe(ANNOUNCER_TOPIC)
+            rc, mid = client.subscribe(
+                f"foris-controller/{self.controller_id}/notification/remote/action/advertize")
             if rc == mqtt.MQTT_ERR_SUCCESS:
                 self.announcer_check_mid = mid
                 logger.debug("Subscribing to announcer (mid=%d).", self.announcer_check_mid)
@@ -74,7 +74,7 @@ class MqttSender(BaseSender):
 
         def on_message(client, userdata, msg):
             logger.debug("Msg recieved for '%s' (msg=%s", msg.topic, msg.payload)
-            if msg.topic == ANNOUNCER_TOPIC:
+            if msg.topic == f"foris-controller/{self.controller_id}/notification/remote/action/advertize":
                 try:
                     parsed = json.loads(msg.payload)
                 except ValueError:

@@ -1,6 +1,6 @@
 #
 # foris-client
-# Copyright (C) 2017 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2019 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,12 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
+
+
+import uuid
+
+
+ID = f"{uuid.getnode():012x}"
 
 
 class ControllerError(Exception):
@@ -46,7 +52,7 @@ class BaseSender(object):
     def connect(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def send(self, module, action, data, timeout=None):
+    def send(self, module, action, data, timeout=None, controller_id=ID):
         raise NotImplementedError()
 
     def disconnect(self):

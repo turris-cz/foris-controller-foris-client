@@ -1,6 +1,6 @@
 #
 # foris-client
-# Copyright (C) 2017 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2019 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import ubus
 import uuid
 import json
 
-from .base import BaseSender, BaseListener
+from .base import BaseSender, BaseListener, ID
 
 logger = logging.getLogger(__name__)
 
@@ -65,16 +65,12 @@ class UbusSender(BaseSender):
             % (socket_path, default_timeout)
         )
 
-    def send(self, module, action, data, timeout=None):
+    def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = ID):
         """ send request
-
         :param module: module which will be used
-        :type module: str
         :param action: action which will be called
-        :type action: str
         :param data: data for the request
-        :type data: dict
-        :param timeout: timeout for the request in ms (0=wait forever)
+        :param controller_id: ignored for ubus
         :returns: reply
         """
         timeout = self.default_timeout if timeout is None else timeout
@@ -128,7 +124,7 @@ class UbusListener(BaseListener):
 
         :param socket_path: path to ubus socket
         :type socket_path: str
-        :param handler: handler which will be called on obtained data
+        :param handler: handler which will be called on obtained data and controller_id
         :type handler: callable
         :param timeout: how log is the listen period (in ms)
         :type timeout: int
@@ -157,7 +153,7 @@ class UbusListener(BaseListener):
             if msg_data:
                 msg["data"] = msg_data
             logger.debug("Notification recieved %s." % msg)
-            self.handler(msg)
+            self.handler(msg, ID)
 
         listen_object = "foris-controller-%s" % (self.module if self.module else "*")
         logger.debug("Listening to '%s'." % listen_object)

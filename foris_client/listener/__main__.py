@@ -83,26 +83,27 @@ def main():
     logger.debug("Version %s" % __version__)
 
     if options.log_file:
-        handler = logging.FileHandler(options.log_file)
+        logging_handler = logging.FileHandler(options.log_file)
         if options.debug:
-            handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter("[%(created)f:%(process)d]" + logging.BASIC_FORMAT))
-        logging.getLogger().addHandler(handler)
+            logging_handler.setLevel(logging.DEBUG)
+        logging_handler.setFormatter(
+            logging.Formatter("[%(created)f:%(process)d]" + logging.BASIC_FORMAT))
+        logging.getLogger().addHandler(logging_handler)
 
     if options.output:
         f = open(options.output, "w")
         f.flush()
 
-        def print_to_file(data):
-            f.write(json.dumps(data) + "\n")
+        def print_to_file(data, controller_id):
+            f.write(f"{controller_id} {json.dumps(data)}\n")
             f.flush()
 
         handler = print_to_file
     else:
         f = None
 
-        def print_to_stdout(data):
-            print(json.dumps(data))
+        def print_to_stdout(data, controller_id):
+            print(f"{controller_id} {json.dumps(data)}")
 
         handler = print_to_stdout
 

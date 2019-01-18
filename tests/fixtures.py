@@ -32,7 +32,7 @@ MQTT_ID = os.environ.get("TEST_CLIENT_ID", "%012x" % uuid.getnode())
 
 SOCK_PATH = "/tmp/foris-client-test.soc"
 NOTIFICATIONS_SOCK_PATH = "/tmp/foris-client-notifications-test.soc"
-NOTIFICATIONS_OUTPUT_PATH = "/tmp/foris-client-notifications-test.json"
+NOTIFICATIONS_OUTPUT_PATH = "/tmp/foris-client-notifications-test.out"
 UBUS_PATH = "/tmp/ubus-foris-client-test.soc"
 UBUS_PATH2 = "/tmp/ubus-foris-client-test2.soc"
 LISTENER_LOG = "/tmp/foris-client-listener.txt"
@@ -70,7 +70,7 @@ def read_listener_output(old_data=None):
     while True:
         with open(NOTIFICATIONS_OUTPUT_PATH) as f:
             data = f.readlines()
-        last_data = [json.loads(e.strip()) for e in data]
+        last_data = [json.loads(e.strip().split(" ", 1)[1]) for e in data]
         if not old_data == last_data:
             break
 

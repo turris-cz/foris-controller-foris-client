@@ -24,7 +24,7 @@ import struct
 import sys
 import threading
 
-from .base import BaseSender, BaseListener
+from .base import BaseSender, BaseListener, ID
 
 if sys.version_info < (3, 0):
     import SocketServer
@@ -60,16 +60,13 @@ class UnixSocketSender(BaseSender):
             )
         )
 
-    def send(self, module, action, data, timeout=None):
+    def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = ID):
         """ send request
-
         :param module: module which will be used
-        :type module: str
         :param action: action which will be called
-        :type action: str
         :param data: data for the request
-        :type data: dict
         :param timeout: timeout for the request in ms (0=wait forever)
+        :param controller_id: ignored for unix-socket
         :returns: reply
         """
         timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
@@ -121,7 +118,7 @@ class UnixSocketListener(BaseListener):
 
         :param socket_path: path to ubus socket
         :type socket_path: str
-        :param handler: handler which will be called on obtained data
+        :param handler: handler which will be called on obtained data and controller id
         :type handler: callable
         :param timeout: how log is the listen period (in ms)
         :type timeout: int
@@ -145,7 +142,7 @@ class UnixSocketListener(BaseListener):
                     if not module or data["module"] == module:
                         with lock:
                             logger.debug("Triggering handler.")
-                            handler(data)
+                            handler(data, ID)
 
         self.server = Server(socket_path, Handler)
 

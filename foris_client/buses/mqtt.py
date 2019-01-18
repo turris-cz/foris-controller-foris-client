@@ -23,18 +23,18 @@ import json
 import threading
 import time
 import ssl
+import re
 
-from .base import BaseSender, BaseListener, ControllerMissing
+from .base import BaseSender, BaseListener, ControllerMissing, ID
 
 from paho.mqtt import client as mqtt
+from typing import Optional
 
 
 ANNOUNCER_TOPIC = "foris-controller/advertize"
 ANNOUNCER_PERIOD_REQUIRED = 5.0  # in seconds
 
 logger = logging.getLogger(__name__)
-
-ID = "%012x" % uuid.getnode()
 
 
 def _normalize_timeout(timeout):
@@ -46,16 +46,15 @@ class MqttSender(BaseSender):
     def __init__(self, *args, **kwargs):
         self.lock = threading.Lock()
         self.announcer_check_mid = None
-        self.announcer_check_last = time.time()
+        self.announcer_check_last = None
         super(MqttSender, self).__init__(*args, **kwargs)
 
     def connect(
         self, host, port, default_timeout=None, tls_files=[],
-        controller_id="%012x" % uuid.getnode()
     ):
         self.default_timeout = _normalize_timeout(default_timeout)
         self.tls_files = tls_files
-        self.controller_id = controller_id
+        self.controller_id = None
 
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
@@ -78,19 +77,19 @@ class MqttSender(BaseSender):
             if msg.topic == ANNOUNCER_TOPIC:
                 try:
                     parsed = json.loads(msg.payload)
-                    if self.controller_id == parsed["id"]:
-                        self.announcer_check_last = time.time()
                 except ValueError:
                     logger.error("Announcement not in JSON format.")
                     return
+                if self.controller_id == parsed["id"]:
+                    self.announcer_check_last = time.time()
             else:
                 try:
                     parsed = json.loads(msg.payload)
-                    self.result = parsed
-                    self.passed = True
                 except ValueError:
                     logger.error("Reply is not in JSON format.")
                     return
+                self.result = parsed
+                self.passed = True
 
                 client.unsubscribe(self.reply_topic)
                 client.loop_stop()
@@ -126,16 +125,18 @@ class MqttSender(BaseSender):
         logger.debug("Sender Disconnected.")
         self.client.disconnect()
 
-    def send(self, module, action, data, timeout=None):
+    def send(self, module: str, action: str, data: dict, timeout=None, controller_id: str = ID):
         timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
         msg_id = uuid.uuid1()
-        publish_topic = "foris-controller/%s/request/%s/action/%s" % (
-            self.controller_id, module, action,
+        publish_topic: Optional[str] = "foris-controller/%s/request/%s/action/%s" % (
+            controller_id, module, action,
         )
-        reply_topic = "foris-controller/%s/reply/%s" % (self.controller_id, msg_id,)
+        reply_topic: Optional[str] = "foris-controller/%s/reply/%s" % (self.controller_id, msg_id,)
         with self.lock:
+            self.controller_id = controller_id
+            self.announcer_check_last = time.time()  # reset announcer counter
             self.reply_topic = reply_topic
-            self.data = data
+            self.data: Optional[dict] = data
             self.publish_topic = publish_topic
             self.passed = False
             self.client.subscribe(reply_topic)
@@ -188,7 +189,7 @@ class MqttSender(BaseSender):
 class MqttListener(BaseListener):
     def connect(
         self, host, port, handler, module=None, timeout=0, tls_files=[],
-        controller_id="%012x" % uuid.getnode(),
+        controller_id="+",
     ):
         self.controller_id = controller_id
         self.tls_files = tls_files
@@ -199,7 +200,7 @@ class MqttListener(BaseListener):
 
         def on_connect(client, userdata, flags, rc):
             listen_topic = "foris-controller/%s/notification/%s/action/+" % (
-                self.controller_id, module if module else "+"
+                self.controller_id if self.controller_id else "+", module if module else "+"
             )
             rc, mid = client.subscribe(listen_topic)
             if rc != 0:
@@ -216,7 +217,9 @@ class MqttListener(BaseListener):
                 parsed = json.loads(msg.payload)
             except Exception:
                 logger.error("Wrong payload not in JSON format")
-            handler(parsed)
+            controller_id, _, _ = re.match(
+                "foris-controller/([^/]+)/notification/([^/]+)/action/([^/]+)$", msg.topic).groups()
+            handler(parsed, controller_id)
 
         self.client = mqtt.Client()
 

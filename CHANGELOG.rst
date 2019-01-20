@@ -1,3 +1,10 @@
+0.9.4 (2019-01-20)
+------------------
+
+* handle advertizements as notifications (remote.advertize)
+* controller_id added to sending and listening api
+* python2 is no longer supported
+
 0.9.3 (2019-01-16)
 ------------------
 

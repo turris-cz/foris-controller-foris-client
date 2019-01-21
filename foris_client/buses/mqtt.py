@@ -57,8 +57,7 @@ class MqttSender(BaseSender):
 
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
-            rc, mid = client.subscribe(
-                f"foris-controller/{self.controller_id}/notification/remote/action/advertize")
+            rc, mid = client.subscribe(f"foris-controller/+/notification/remote/action/advertize")
             if rc == mqtt.MQTT_ERR_SUCCESS:
                 self.announcer_check_mid = mid
                 logger.debug("Subscribing to announcer (mid=%d).", self.announcer_check_mid)
@@ -66,7 +65,7 @@ class MqttSender(BaseSender):
         def on_subscribe(client, userdata, mid, granted_qos):
             logger.debug("Subscribed to %d.", mid)
             if mid != self.announcer_check_mid:
-                msg = {"reply_topic": self.reply_topic}
+                msg = {"reply_msg_id": str(self.reply_msg_id)}
                 if self.data is not None:
                     msg["data"] = self.data
 
@@ -74,13 +73,15 @@ class MqttSender(BaseSender):
 
         def on_message(client, userdata, msg):
             logger.debug("Msg recieved for '%s' (msg=%s", msg.topic, msg.payload)
-            if msg.topic == f"foris-controller/{self.controller_id}/notification/remote/action/advertize":
+            match = re.match(
+                f"foris-controller/([^/]+)/notification/remote/action/advertize", msg.topic)
+            if match:
                 try:
-                    parsed = json.loads(msg.payload)
+                    json.loads(msg.payload)
                 except ValueError:
-                    logger.error("Announcement not in JSON format.")
+                    logger.error("Adverticement not in JSON format.")
                     return
-                if self.controller_id == parsed["id"]:
+                if self.controller_id == match.group(1):
                     self.announcer_check_last = time.time()
             else:
                 try:
@@ -91,7 +92,7 @@ class MqttSender(BaseSender):
                 self.result = parsed
                 self.passed = True
 
-                client.unsubscribe(self.reply_topic)
+                client.unsubscribe(msg.topic)
                 client.loop_stop()
 
         def on_unsubscribe(client, userdata, mid):
@@ -131,11 +132,11 @@ class MqttSender(BaseSender):
         publish_topic: Optional[str] = "foris-controller/%s/request/%s/action/%s" % (
             controller_id, module, action,
         )
-        reply_topic: Optional[str] = "foris-controller/%s/reply/%s" % (self.controller_id, msg_id,)
+        reply_topic: Optional[str] = "foris-controller/%s/reply/%s" % (controller_id, msg_id,)
         with self.lock:
             self.controller_id = controller_id
             self.announcer_check_last = time.time()  # reset announcer counter
-            self.reply_topic = reply_topic
+            self.reply_msg_id = msg_id
             self.data: Optional[dict] = data
             self.publish_topic = publish_topic
             self.passed = False
@@ -170,7 +171,6 @@ class MqttSender(BaseSender):
                 result = self.result
 
             self.result = None
-            self.reply_topic = None
             self.publish_topic = None
             self.data = None
 

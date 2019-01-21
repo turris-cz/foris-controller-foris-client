@@ -57,7 +57,8 @@ class MqttSender(BaseSender):
 
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
-            rc, mid = client.subscribe(f"foris-controller/+/notification/remote/action/advertize")
+            rc, mid = client.subscribe(
+                f"foris-controller/+/notification/remote/action/advertize", qos=0)
             if rc == mqtt.MQTT_ERR_SUCCESS:
                 self.announcer_check_mid = mid
                 logger.debug("Subscribing to announcer (mid=%d).", self.announcer_check_mid)
@@ -69,7 +70,7 @@ class MqttSender(BaseSender):
                 if self.data is not None:
                     msg["data"] = self.data
 
-                client.publish(self.publish_topic, json.dumps(msg))
+                client.publish(self.publish_topic, json.dumps(msg), qos=0)
 
         def on_message(client, userdata, msg):
             logger.debug("Msg recieved for '%s' (msg=%s", msg.topic, msg.payload)
@@ -101,7 +102,7 @@ class MqttSender(BaseSender):
         def on_disconnect(client, userdata, rc):
             logger.debug("Sender Disconnected.")
 
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(client_id=str(uuid.uuid4()), clean_session=False)
         if self.tls_files:
             ca_path, cert_path, key_path = self.tls_files
             context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
@@ -140,7 +141,7 @@ class MqttSender(BaseSender):
             self.data: Optional[dict] = data
             self.publish_topic = publish_topic
             self.passed = False
-            self.client.subscribe(reply_topic)
+            self.client.subscribe(reply_topic, qos=0)
             self.client.loop_start()
 
             if not timeout:  # wait forever
@@ -202,7 +203,7 @@ class MqttListener(BaseListener):
             listen_topic = "foris-controller/%s/notification/%s/action/+" % (
                 self.controller_id if self.controller_id else "+", module if module else "+"
             )
-            rc, mid = client.subscribe(listen_topic)
+            rc, mid = client.subscribe(listen_topic, qos=0)
             if rc != 0:
                 logger.error("Failed to subscribe to '%s'", listen_topic)
             logger.debug("Subscribing to '%s' (mid=%d)", listen_topic, mid)
@@ -221,7 +222,7 @@ class MqttListener(BaseListener):
                 "foris-controller/([^/]+)/notification/([^/]+)/action/([^/]+)$", msg.topic).groups()
             handler(parsed, controller_id)
 
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(client_id=str(uuid.uuid4()), clean_session=False)
 
         if self.tls_files:
             ca_path, cert_path, key_path = self.tls_files

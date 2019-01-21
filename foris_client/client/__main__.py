@@ -102,7 +102,6 @@ def main():
         sender = MqttSender(
             options.host, options.port, options.timeout,
             tls_files=options.tls_files,
-            controller_id=options.controller_id,
         )
 
     data = None
@@ -113,7 +112,8 @@ def main():
     if options.json:
         data = json.loads(options.json)
 
-    response = sender.send(options.module, options.action, data)
+    response = sender.send(
+        options.module, options.action, data, controller_id=options.controller_id)
     if not options.output:
         print(json.dumps(response))
     else:

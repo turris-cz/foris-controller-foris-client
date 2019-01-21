@@ -1,3 +1,10 @@
+0.9.5 (2019-01-21)
+------------------
+
+* mqtt: more resilent message handling
+* mqtt: request reply protocol changed
+* foris-client script fix
+
 0.9.4 (2019-01-20)
 ------------------
 

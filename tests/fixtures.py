@@ -50,7 +50,7 @@ def wait_for_mqtt_ready():
 
     def on_message(client, userdata, msg):
         try:
-            if json.loads(msg.payload)["state"] in ["started", "running"]:
+            if json.loads(msg.payload)["data"]["state"] in ["started", "running"]:
                 client.loop_stop(True)
         except Exception:
             pass

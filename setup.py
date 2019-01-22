@@ -43,6 +43,7 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=[
         "ubus @ git+https://gitlab.labs.nic.cz/turris/python-ubus.git",
+        "paho-mqtt",
     ],
     setup_requires=[
         'pytest-runner',

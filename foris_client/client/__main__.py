@@ -23,10 +23,28 @@ import argparse
 import logging
 import json
 import uuid
+import typing
 
 from foris_client import __version__
 
 logger = logging.getLogger("foris_client")
+
+
+available_buses: typing.List[str] = ['unix-socket']
+
+
+try:
+    __import__("ubus")
+    available_buses.append("ubus")
+except ModuleNotFoundError:
+    pass
+
+
+try:
+    __import__("paho.mqtt.client")
+    available_buses.append("mqtt")
+except ModuleNotFoundError:
+    pass
 
 
 def main():
@@ -62,21 +80,25 @@ def main():
     )
 
     subparsers = parser.add_subparsers(help="buses", dest="bus")
-    ubus_parser = subparsers.add_parser("ubus", help="use ubus to send commands")
-    ubus_parser.add_argument("--path", dest="path", default='/var/run/ubus.sock')
+    subparsers.required = True
+
     unix_parser = subparsers.add_parser("unix-socket", help="use unix socket to send commands")
     unix_parser.add_argument("--path", dest="path", default='/tmp/foris-controller.soc')
-    mqtt_parser = subparsers.add_parser("mqtt", help="use mqtt to send commands")
-    mqtt_parser.add_argument("--host", dest="host", default='localhost')
-    mqtt_parser.add_argument("--port", dest="port", type=int, default=1883)
-    mqtt_parser.add_argument(
-        "--tls-files", nargs=3, default=[], metavar=("CA_CRT_FILE", "CRT_FILE", "KEY_FILE"),
-        help="Set a paths to TLS files to access mqtt via encrypted connection."
-    )
-    mqtt_parser.add_argument(
-        "--controller-id", default="%012x" % uuid.getnode(),
-        help="sets which controller on the messages bus should be configured",
-    )
+    if "ubus" in available_buses:
+        ubus_parser = subparsers.add_parser("ubus", help="use ubus to send commands")
+        ubus_parser.add_argument("--path", dest="path", default='/var/run/ubus.sock')
+    if "mqtt" in available_buses:
+        mqtt_parser = subparsers.add_parser("mqtt", help="use mqtt to send commands")
+        mqtt_parser.add_argument("--host", dest="host", default='localhost')
+        mqtt_parser.add_argument("--port", dest="port", type=int, default=1883)
+        mqtt_parser.add_argument(
+            "--tls-files", nargs=3, default=[], metavar=("CA_CRT_FILE", "CRT_FILE", "KEY_FILE"),
+            help="Set a paths to TLS files to access mqtt via encrypted connection."
+        )
+        mqtt_parser.add_argument(
+            "--controller-id", default="%012x" % uuid.getnode(),
+            help="sets which controller on the messages bus should be configured",
+        )
 
     options = parser.parse_args()
 

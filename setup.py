@@ -41,22 +41,22 @@ setup(
     license='COPYING',
     description=DESCRIPTION,
     long_description=open('README.rst').read(),
-    install_requires=[
-        "ubus @ git+https://gitlab.labs.nic.cz/turris/python-ubus.git",
-        "paho-mqtt",
-    ],
     setup_requires=[
         'pytest-runner',
     ],
     tests_require=[
         'pytest',
         'foris-controller',
+        'ubus',
+        'paho-mqtt',
     ],
     extras_require={
         'testsuite': [
             "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller.git#egg=foris-controller",
             "foris-controller-testtools @ git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git#egg=foris-controller-testtools",
-        ]
+        ],
+        'ubus': ["ubus"],
+        'mqtt': ["paho-mqtt"],
     },
     entry_points={
         "console_scripts": [

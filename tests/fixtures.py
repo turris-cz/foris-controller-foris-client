@@ -28,7 +28,7 @@ import uuid
 
 MQTT_HOST = "localhost"
 MQTT_PORT = 11883
-MQTT_ID = os.environ.get("TEST_CLIENT_ID", "%012x" % uuid.getnode())
+MQTT_ID = os.environ.get("TEST_CLIENT_ID", "%016X" % uuid.getnode())
 
 SOCK_PATH = "/tmp/foris-client-test.soc"
 NOTIFICATIONS_SOCK_PATH = "/tmp/foris-client-notifications-test.soc"

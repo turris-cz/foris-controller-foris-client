@@ -25,7 +25,7 @@ import time
 import ssl
 import re
 
-from .base import BaseSender, BaseListener, ControllerMissing, ID
+from .base import BaseSender, BaseListener, ControllerMissing, prepare_controller_id
 
 from paho.mqtt import client as mqtt
 from typing import Optional
@@ -127,7 +127,9 @@ class MqttSender(BaseSender):
         logger.debug("Sender Disconnected.")
         self.client.disconnect()
 
-    def send(self, module: str, action: str, data: dict, timeout=None, controller_id: str = ID):
+    def send(self, module: str, action: str, data: dict, timeout=None, controller_id: str = None):
+        controller_id = prepare_controller_id(controller_id)
+
         timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
         msg_id = uuid.uuid1()
         publish_topic: Optional[str] = "foris-controller/%s/request/%s/action/%s" % (

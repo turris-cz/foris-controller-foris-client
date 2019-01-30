@@ -24,7 +24,7 @@ import struct
 import sys
 import threading
 
-from .base import BaseSender, BaseListener, ID
+from .base import BaseSender, BaseListener, prepare_controller_id
 
 if sys.version_info < (3, 0):
     import SocketServer
@@ -60,7 +60,7 @@ class UnixSocketSender(BaseSender):
             )
         )
 
-    def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = ID):
+    def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = None):
         """ send request
         :param module: module which will be used
         :param action: action which will be called
@@ -142,7 +142,7 @@ class UnixSocketListener(BaseListener):
                     if not module or data["module"] == module:
                         with lock:
                             logger.debug("Triggering handler.")
-                            handler(data, ID)
+                            handler(data, prepare_controller_id(None))
 
         self.server = Server(socket_path, Handler)
 

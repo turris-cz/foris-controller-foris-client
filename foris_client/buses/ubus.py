@@ -24,7 +24,7 @@ import ubus
 import uuid
 import json
 
-from .base import BaseSender, BaseListener, ID
+from .base import BaseSender, BaseListener, prepare_controller_id
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class UbusSender(BaseSender):
             % (socket_path, default_timeout)
         )
 
-    def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = ID):
+    def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = None):
         """ send request
         :param module: module which will be used
         :param action: action which will be called
@@ -153,7 +153,7 @@ class UbusListener(BaseListener):
             if msg_data:
                 msg["data"] = msg_data
             logger.debug("Notification recieved %s." % msg)
-            self.handler(msg, ID)
+            self.handler(msg, prepare_controller_id(None))
 
         listen_object = "foris-controller-%s" % (self.module if self.module else "*")
         logger.debug("Listening to '%s'." % listen_object)

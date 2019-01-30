@@ -19,9 +19,13 @@
 
 
 import uuid
+import typing
 
 
-ID = f"{uuid.getnode():012x}"
+def prepare_controller_id(controller_id: typing.Optional[str]):
+    if controller_id is None:
+        return f"{uuid.getnode():016X}"
+    return controller_id
 
 
 class ControllerError(Exception):
@@ -52,7 +56,7 @@ class BaseSender(object):
     def connect(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def send(self, module, action, data, timeout=None, controller_id=ID):
+    def send(self, module, action, data, timeout=None, controller_id=None):
         raise NotImplementedError()
 
     def disconnect(self):

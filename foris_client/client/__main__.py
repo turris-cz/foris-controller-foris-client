@@ -134,8 +134,9 @@ def main():
     if options.json:
         data = json.loads(options.json)
 
+    kwargs = {"controller_id": options.controller_id} if options.bus == "mqtt" else {}
     response = sender.send(
-        options.module, options.action, data, controller_id=options.controller_id)
+        options.module, options.action, data, **kwargs)
     if not options.output:
         print(json.dumps(response))
     else:

@@ -1,9 +1,8 @@
-0.9.5 (2019-01-21)
+0.9.6 (2019-01-30)
 ------------------
 
-* mqtt: more resilent message handling
-* mqtt: request reply protocol changed
-* foris-client script fix
+* fix foris-client binary for non-mqtt buses
+* setup.py: make ubus and mqtt buses optional
 
 0.9.4 (2019-01-20)
 ------------------

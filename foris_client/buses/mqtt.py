@@ -50,15 +50,17 @@ class MqttSender(BaseSender):
 
     def connect(
         self, host, port, default_timeout=None, tls_files=[],
+        credentials=None,
     ):
         self.default_timeout = _normalize_timeout(default_timeout)
+        self.credentials = credentials
         self.tls_files = tls_files
         self.controller_id = None
 
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
             rc, mid = client.subscribe(
-                f"foris-controller/+/notification/remote/action/advertize", qos=0)
+                "foris-controller/+/notification/remote/action/advertize", qos=0)
             if rc == mqtt.MQTT_ERR_SUCCESS:
                 self.announcer_check_mid = mid
                 logger.debug("Subscribing to announcer (mid=%d).", self.announcer_check_mid)
@@ -75,7 +77,7 @@ class MqttSender(BaseSender):
         def on_message(client, userdata, msg):
             logger.debug("Msg recieved for '%s' (msg=%s", msg.topic, msg.payload)
             match = re.match(
-                f"foris-controller/([^/]+)/notification/remote/action/advertize", msg.topic)
+                r"foris-controller/([^/]+)/notification/remote/action/advertize", msg.topic)
             if match:
                 try:
                     json.loads(msg.payload)
@@ -118,6 +120,8 @@ class MqttSender(BaseSender):
         self.client.on_message = on_message
         self.client.on_disconnect = on_disconnect
 
+        if self.credentials:
+            self.client.username_pw_set(*self.credentials)
         self.client.connect(host, port, 30)
 
         # Start the loop to keep the connection alive
@@ -192,10 +196,11 @@ class MqttSender(BaseSender):
 class MqttListener(BaseListener):
     def connect(
         self, host, port, handler, module=None, timeout=0, tls_files=[],
-        controller_id="+",
+        controller_id="+", credentials=None,
     ):
         self.controller_id = controller_id
         self.tls_files = tls_files
+        self.credentials = credentials
 
         def on_disconnect(client, userdata, rc):
             logger.debug("Listener Disconnected.")
@@ -242,6 +247,8 @@ class MqttListener(BaseListener):
         self.client.on_disconnect = on_disconnect
         self.timeout = _normalize_timeout(timeout)
         self.connected = None
+        if self.credentials:
+            self.client.username_pw_set(*self.credentials)
         self.client.connect(host, port, 30)
 
     def disconnect(self):

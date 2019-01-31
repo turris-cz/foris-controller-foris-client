@@ -27,6 +27,7 @@ import typing
 import re
 
 from foris_client import __version__
+from foris_client.utils import read_passwd_file
 
 logger = logging.getLogger("foris_listener")
 
@@ -94,6 +95,11 @@ def main():
             "--controller-id", type=lambda x: re.match(r"[a-zA-Z]{16}", x).group().upper(),
             help="sets which controller on the messages bus should be configured (8 bytes is hex)",
         )
+        mqtt_parser.add_argument(
+            "--passwd-file", type=lambda x: read_passwd_file(x),
+            help="path to passwd file (first record will be used to authenticate)",
+            default=None,
+        )
 
     options = parser.parse_args()
 
@@ -152,6 +158,7 @@ def main():
                 options.module, options.timeout,
                 tls_files=options.tls_files,
                 controller_id=getattr(options, 'controller_id', "+"),
+                credentials=options.passwd_file,
             )
 
         listener.listen()

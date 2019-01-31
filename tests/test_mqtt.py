@@ -62,7 +62,7 @@ def test_extra_data(mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client)
 
 def test_timeout(mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client):
     mqtt_client.send("about", "get", None, timeout=1000)
-    sender = MqttSender(MQTT_HOST, MQTT_PORT)
+    sender = MqttSender(MQTT_HOST, MQTT_PORT, None)
     sender.send("about", "get", None)
 
 

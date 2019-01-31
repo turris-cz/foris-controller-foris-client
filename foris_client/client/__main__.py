@@ -22,11 +22,11 @@
 import argparse
 import logging
 import json
-import uuid
 import typing
 import re
 
 from foris_client import __version__
+from foris_client.utils import read_passwd_file
 
 logger = logging.getLogger("foris_client")
 
@@ -100,6 +100,11 @@ def main():
             "--controller-id", type=lambda x: re.match(r"[a-zA-Z]{16}", x).group().upper(),
             help="sets which controller on the messages bus should be configured (8 bytes is hex)",
         )
+        mqtt_parser.add_argument(
+            "--passwd-file", type=lambda x: read_passwd_file(x),
+            help="path to passwd file (first record will be used to authenticate)",
+            default=None,
+        )
 
     options = parser.parse_args()
 
@@ -124,7 +129,7 @@ def main():
         logger.debug("Using mqtt to send commands.")
         sender = MqttSender(
             options.host, options.port, options.timeout,
-            tls_files=options.tls_files,
+            tls_files=options.tls_files, credentials=options.passwd_file,
         )
 
     data = None

@@ -327,7 +327,7 @@ def mqtt_client(mosquitto_test, mqtt_controller):
     wait_for_mqtt_ready()
 
     from foris_client.buses.mqtt import MqttSender
-    sender = MqttSender(MQTT_HOST, MQTT_PORT)
+    sender = MqttSender(MQTT_HOST, MQTT_PORT, None)
     yield sender
     sender.disconnect()
 
@@ -396,6 +396,6 @@ def mqtt_notify(mqtt_listener):
 
     wait_for_mqtt_ready()
 
-    sender = MqttNotificationSender(MQTT_HOST, MQTT_PORT)
+    sender = MqttNotificationSender(MQTT_HOST, MQTT_PORT, None)
     yield sender
     sender.disconnect()

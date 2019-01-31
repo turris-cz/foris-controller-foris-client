@@ -1,3 +1,9 @@
+0.9.7 (2019-01-31)
+------------------
+
+* mqtt: can set path to credentials file
+* controller_id format changed
+
 0.9.6 (2019-01-30)
 ------------------
 

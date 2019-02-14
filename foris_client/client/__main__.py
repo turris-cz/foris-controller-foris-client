@@ -97,7 +97,7 @@ def main():
             help="Set a paths to TLS files to access mqtt via encrypted connection."
         )
         mqtt_parser.add_argument(
-            "--controller-id", type=lambda x: re.match(r"[a-zA-Z]{16}", x).group().upper(),
+            "--controller-id", type=lambda x: re.match(r"[0-9a-zA-Z]{16}", x).group().upper(),
             help="sets which controller on the messages bus should be configured (8 bytes is hex)",
         )
         mqtt_parser.add_argument(

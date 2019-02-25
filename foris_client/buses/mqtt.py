@@ -46,6 +46,7 @@ class MqttSender(BaseSender):
         self.lock = threading.Lock()
         self.announcer_check_mid = None
         self.announcer_check_last = None
+        self.mqtt_client_id = f'{uuid.uuid4()}-client-sender'
         super(MqttSender, self).__init__(*args, **kwargs)
 
     def connect(
@@ -104,7 +105,7 @@ class MqttSender(BaseSender):
         def on_disconnect(client, userdata, rc):
             logger.debug("Sender Disconnected.")
 
-        self.client = mqtt.Client(client_id=str(uuid.uuid4()), clean_session=False)
+        self.client = mqtt.Client(client_id=self.mqtt_client_id, clean_session=False)
         if self.tls_files:
             ca_path, cert_path, key_path = self.tls_files
             context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
@@ -194,6 +195,11 @@ class MqttSender(BaseSender):
 
 
 class MqttListener(BaseListener):
+
+    def __init__(self, *args, **kwargs):
+        self.mqtt_client_id = f'{uuid.uuid4()}-client-listener'
+        super().__init__(*args, **kwargs)
+
     def connect(
         self, host, port, handler, module=None, timeout=0, tls_files=[],
         controller_id="+", credentials=None,
@@ -229,7 +235,7 @@ class MqttListener(BaseListener):
                 "foris-controller/([^/]+)/notification/([^/]+)/action/([^/]+)$", msg.topic).groups()
             handler(parsed, controller_id)
 
-        self.client = mqtt.Client(client_id=str(uuid.uuid4()), clean_session=False)
+        self.client = mqtt.Client(client_id=self.mqtt_client_id, clean_session=False)
 
         if self.tls_files:
             ca_path, cert_path, key_path = self.tls_files

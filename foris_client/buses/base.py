@@ -29,7 +29,6 @@ def prepare_controller_id(controller_id: typing.Optional[str]):
 
 
 class ControllerError(Exception):
-
     def __init__(self, errors):
         res = ["Controller error(s) has occured:"]
         for error in errors:
@@ -42,11 +41,14 @@ class ControllerError(Exception):
         self.errors = errors
 
 
+def generate_controller_error(module, action):
+    return type(f"ControllerError__{module}__{action}", (ControllerError,), {})
+
+
 class ControllerMissing(Exception):
     def __init__(self, device_id):
         self.device_id = device_id
-        super(ControllerMissing, self).__init__(
-            "Connection to controller (%s) is lost." % device_id)
+        super(ControllerMissing, self).__init__(f"Connection to controller {device_id} is lost.")
 
 
 class BaseSender(object):
@@ -64,7 +66,7 @@ class BaseSender(object):
 
     def _raise_exception_on_error(self, msg):
         if "errors" in msg:
-            raise ControllerError(msg["errors"])
+            raise generate_controller_error(msg["module"], msg["action"])(msg["errors"])
 
 
 class BaseListener(object):

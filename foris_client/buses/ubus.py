@@ -106,6 +106,8 @@ class UbusSender(BaseSender):
         response = json.loads(raw_response)
 
         # Raise exception on error
+        response["action"] = action
+        response["module"] = module
         self._raise_exception_on_error(response)
 
         return response.get("data", None)

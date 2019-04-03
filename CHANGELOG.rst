@@ -1,3 +1,9 @@
+0.9.9 (2019-04-03)
+------------------
+
+* generate different exception for each api call
+* mqtt: nicer client_id
+
 0.9.8 (2019-02-14)
 ------------------
 

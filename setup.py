@@ -66,6 +66,7 @@ setup(
     },
     dependency_links=[
         "git+https://gitlab.labs.nic.cz/turris/foris-controller.git#egg=foris-controller",
+        "git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git#egg=foris-controller-testtools",
     ],
     zip_safe=False,
 )

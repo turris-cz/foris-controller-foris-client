@@ -26,8 +26,13 @@ from foris_client.buses.mqtt import MqttSender
 from foris_client.buses.base import ControllerError
 
 from .fixtures import (
-    mqtt_controller, mqtt_client, MQTT_HOST, mqtt_listener,
-    mqtt_notify, mosquitto_test, MQTT_PORT,
+    mqtt_controller,
+    mqtt_client,
+    MQTT_HOST,
+    mqtt_listener,
+    mqtt_notify,
+    mosquitto_test,
+    MQTT_PORT,
 )
 
 
@@ -39,7 +44,8 @@ def test_about(mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client):
 def test_long_messages(mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client):
     data = {
         "random_characters": "".join(
-            random.choice(string.ascii_letters) for _ in range(1024 * 1024))
+            random.choice(string.ascii_letters) for _ in range(1024 * 1024)
+        )
     }
     res = mqtt_client.send("echo", "echo", {"request_msg": data})
     assert res == {"reply_msg": data}
@@ -72,28 +78,30 @@ def test_notifications_request(mosquitto_test, mqtt_listener, mqtt_controller, m
     mqtt_client.send("web", "set_language", {"language": "cs"})
     last = read_listener_output(old_data)[-1]
     assert last == {
-        u'action': u'set_language',
-        u'data': {u'language': u'cs'},
-        u'kind': u'notification',
-        u'module': u'web'
-     }
+        u"action": u"set_language",
+        u"data": {u"language": u"cs"},
+        u"kind": u"notification",
+        u"module": u"web",
+    }
 
 
-def test_notifications_cmd(mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client, mqtt_notify):
+def test_notifications_cmd(
+    mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client, mqtt_notify
+):
     _, read_listener_output = mqtt_listener
     data = read_listener_output()
     mqtt_notify.notify("test_module", "test_action", {"test_data": "test"})
     data = read_listener_output(data)
     assert data[-1] == {
-        u'action': u'test_action',
-        u'data': {u'test_data': u'test'},
-        u'kind': u'notification',
-        u'module': u'test_module',
+        u"action": u"test_action",
+        u"data": {u"test_data": u"test"},
+        u"kind": u"notification",
+        u"module": u"test_module",
     }
     mqtt_notify.notify("maintain", "reboot_required")
     data = read_listener_output(data)
     assert data[-1] == {
-        u'action': u'reboot_required',
-        u'kind': u'notification',
-        u'module': u'maintain'
+        u"action": u"reboot_required",
+        u"kind": u"notification",
+        u"module": u"maintain",
     }

@@ -31,11 +31,10 @@ logger = logging.getLogger(__name__)
 
 def _chunks(data, size):
     for i in range(0, len(data), size):
-        yield data[i:i + size]
+        yield data[i : i + size]
 
 
 class UbusSender(BaseSender):
-
     def connect(self, socket_path, default_timeout=0):
         """ connects to ubus
 
@@ -54,15 +53,14 @@ class UbusSender(BaseSender):
                 return
             else:
                 logger.error(
-                    "Connected to '%s'. Disconnecting to reconnect to '%s' " %
-                    (connected_socket, socket_path)
+                    "Connected to '%s'. Disconnecting to reconnect to '%s' "
+                    % (connected_socket, socket_path)
                 )
                 self.disconnect()
         logger.debug("Trying to connect to ubus socket '%s'." % socket_path)
         ubus.connect(socket_path)
         logger.debug(
-            "Connected to ubus socket '%s' (default_timeout=%d)."
-            % (socket_path, default_timeout)
+            "Connected to ubus socket '%s' (default_timeout=%d)." % (socket_path, default_timeout)
         )
 
     def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = None):
@@ -86,19 +84,37 @@ class UbusSender(BaseSender):
 
         if len(dumped_data) > 512 * 1024:
             for data_part in _chunks(dumped_data, 512 * 1024):
-                ubus.call(ubus_object, action, {
-                    "payload": {"multipart_data": data_part},
-                    "final": False, "multipart": True, "request_id": request_id
-                })
-            res = ubus.call(ubus_object, action, {
-                "payload": {"multipart_data": ""},
-                "final": True, "multipart": True, "request_id": request_id,
-            })
+                ubus.call(
+                    ubus_object,
+                    action,
+                    {
+                        "payload": {"multipart_data": data_part},
+                        "final": False,
+                        "multipart": True,
+                        "request_id": request_id,
+                    },
+                )
+            res = ubus.call(
+                ubus_object,
+                action,
+                {
+                    "payload": {"multipart_data": ""},
+                    "final": True,
+                    "multipart": True,
+                    "request_id": request_id,
+                },
+            )
         else:
-            res = ubus.call(ubus_object, action, {
-                "payload": {"data": data} if data is not None else {},
-                "final": True, "multipart": False, "request_id": request_id
-            })
+            res = ubus.call(
+                ubus_object,
+                action,
+                {
+                    "payload": {"data": data} if data is not None else {},
+                    "final": True,
+                    "multipart": False,
+                    "request_id": request_id,
+                },
+            )
 
         raw_response = "".join([e["data"] for e in res])
         logger.debug("Message received: %s", raw_response[:10000])
@@ -145,12 +161,8 @@ class UbusListener(BaseListener):
         logger.debug("Starting to listen.")
 
         def inner_handler(module, data):
-            module_name = module[len("foris-controller-"):]
-            msg = {
-                "module": module_name,
-                "kind": "notification",
-                "action": data["action"],
-            }
+            module_name = module[len("foris-controller-") :]
+            msg = {"module": module_name, "kind": "notification", "action": data["action"]}
             msg_data = data.get("data", None)
             if msg_data:
                 msg["data"] = msg_data

@@ -20,7 +20,8 @@
 
 def pytest_addoption(parser):
     parser.addoption(
-            "--debug-output", action="store_true",
+        "--debug-output",
+        action="store_true",
         default=False,
-        help=("Whether show output of foris-controller cmd")
+        help=("Whether show output of foris-controller cmd"),
     )

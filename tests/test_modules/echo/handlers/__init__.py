@@ -20,7 +20,4 @@
 from .mock import MockEchoHandler
 from .openwrt import OpenwrtEchoHandler
 
-__all__ = [
-    'MockEchoHandler',
-    'OpenwrtEchoHandler',
-]
+__all__ = ["MockEchoHandler", "OpenwrtEchoHandler"]

@@ -41,18 +41,14 @@ def _normalize_timeout(timeout):
 
 
 class MqttSender(BaseSender):
-
     def __init__(self, *args, **kwargs):
         self.lock = threading.Lock()
         self.announcer_check_mid = None
         self.announcer_check_last = None
-        self.mqtt_client_id = f'{uuid.uuid4()}-client-sender'
+        self.mqtt_client_id = f"{uuid.uuid4()}-client-sender"
         super(MqttSender, self).__init__(*args, **kwargs)
 
-    def connect(
-        self, host, port, default_timeout=None, tls_files=[],
-        credentials=None,
-    ):
+    def connect(self, host, port, default_timeout=None, tls_files=[], credentials=None):
         self.default_timeout = _normalize_timeout(default_timeout)
         self.credentials = credentials
         self.tls_files = tls_files
@@ -61,7 +57,8 @@ class MqttSender(BaseSender):
         def on_connect(client, userdata, flags, rc):
             logger.debug("Connected to mqtt server.")
             rc, mid = client.subscribe(
-                "foris-controller/+/notification/remote/action/advertize", qos=0)
+                "foris-controller/+/notification/remote/action/advertize", qos=0
+            )
             if rc == mqtt.MQTT_ERR_SUCCESS:
                 self.announcer_check_mid = mid
                 logger.debug("Subscribing to announcer (mid=%d).", self.announcer_check_mid)
@@ -78,7 +75,8 @@ class MqttSender(BaseSender):
         def on_message(client, userdata, msg):
             logger.debug("Msg recieved for '%s' (msg=%s", msg.topic, msg.payload)
             match = re.match(
-                r"foris-controller/([^/]+)/notification/remote/action/advertize", msg.topic)
+                r"foris-controller/([^/]+)/notification/remote/action/advertize", msg.topic
+            )
             if match:
                 try:
                     json.loads(msg.payload)
@@ -138,9 +136,11 @@ class MqttSender(BaseSender):
         timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
         msg_id = uuid.uuid1()
         publish_topic: Optional[str] = "foris-controller/%s/request/%s/action/%s" % (
-            controller_id, module, action,
+            controller_id,
+            module,
+            action,
         )
-        reply_topic: Optional[str] = "foris-controller/%s/reply/%s" % (controller_id, msg_id,)
+        reply_topic: Optional[str] = "foris-controller/%s/reply/%s" % (controller_id, msg_id)
         with self.lock:
             self.controller_id = controller_id
             self.announcer_check_last = time.time()  # reset announcer counter
@@ -195,14 +195,20 @@ class MqttSender(BaseSender):
 
 
 class MqttListener(BaseListener):
-
     def __init__(self, *args, **kwargs):
-        self.mqtt_client_id = f'{uuid.uuid4()}-client-listener'
+        self.mqtt_client_id = f"{uuid.uuid4()}-client-listener"
         super().__init__(*args, **kwargs)
 
     def connect(
-        self, host, port, handler, module=None, timeout=0, tls_files=[],
-        controller_id="+", credentials=None,
+        self,
+        host,
+        port,
+        handler,
+        module=None,
+        timeout=0,
+        tls_files=[],
+        controller_id="+",
+        credentials=None,
     ):
         self.controller_id = controller_id
         self.tls_files = tls_files
@@ -214,7 +220,8 @@ class MqttListener(BaseListener):
 
         def on_connect(client, userdata, flags, rc):
             listen_topic = "foris-controller/%s/notification/%s/action/+" % (
-                self.controller_id if self.controller_id else "+", module if module else "+"
+                self.controller_id if self.controller_id else "+",
+                module if module else "+",
             )
             rc, mid = client.subscribe(listen_topic, qos=0)
             if rc != 0:
@@ -232,7 +239,8 @@ class MqttListener(BaseListener):
             except Exception:
                 logger.error("Wrong payload not in JSON format")
             controller_id, _, _ = re.match(
-                "foris-controller/([^/]+)/notification/([^/]+)/action/([^/]+)$", msg.topic).groups()
+                "foris-controller/([^/]+)/notification/([^/]+)/action/([^/]+)$", msg.topic
+            ).groups()
             handler(parsed, controller_id)
 
         self.client = mqtt.Client(client_id=self.mqtt_client_id, clean_session=False)

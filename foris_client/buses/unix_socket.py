@@ -30,6 +30,7 @@ if sys.version_info < (3, 0):
     import SocketServer
 else:
     import socketserver
+
     SocketServer = socketserver
 
 
@@ -41,7 +42,6 @@ def _normalize_timeout(timeout):
 
 
 class UnixSocketSender(BaseSender):
-
     def connect(self, socket_path, default_timeout=0):
         """ connects to unix-socket
 
@@ -55,9 +55,8 @@ class UnixSocketSender(BaseSender):
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.sock.connect(socket_path)
         logger.debug(
-            "Connected to '%s' (default_timeout=%d)." % (
-                socket_path, 0 if not default_timeout else default_timeout
-            )
+            "Connected to '%s' (default_timeout=%d)."
+            % (socket_path, 0 if not default_timeout else default_timeout)
         )
 
     def send(self, module: str, action: str, data: str, timeout=None, controller_id: str = None):
@@ -70,11 +69,7 @@ class UnixSocketSender(BaseSender):
         :returns: reply
         """
         timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
-        message = {
-            "kind": "request",
-            "module": module,
-            "action": action,
-        }
+        message = {"kind": "request", "module": module, "action": action}
 
         if data is not None:
             message["data"] = data
@@ -112,7 +107,6 @@ class UnixSocketSender(BaseSender):
 
 
 class UnixSocketListener(BaseListener):
-
     def connect(self, socket_path, handler, module=None, timeout=0):
         """ connects to ubus and starts to listen
 
@@ -128,6 +122,7 @@ class UnixSocketListener(BaseListener):
 
         class Server(SocketServer.ThreadingMixIn, SocketServer.UnixStreamServer):
             pass
+
         Server.timeout = self.timeout
 
         class Handler(SocketServer.StreamRequestHandler):

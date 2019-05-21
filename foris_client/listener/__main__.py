@@ -34,7 +34,7 @@ logger = logging.getLogger("foris_listener")
 LOGGER_MAX_LEN = 10000
 
 
-available_buses: typing.List[str] = ['unix-socket']
+available_buses: typing.List[str] = ["unix-socket"]
 
 
 try:
@@ -55,48 +55,65 @@ def main():
     # Parse the command line options
     parser = argparse.ArgumentParser(prog="foris-listener")
     parser.add_argument("-d", "--debug", dest="debug", action="store_true", default=False)
-    parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument("--version", action="version", version=__version__)
 
     parser.add_argument(
-        "-o", "--output", dest="output", default=None, type=str, metavar="OUTPUT_FILE",
-        help="where to store output json data"
+        "-o",
+        "--output",
+        dest="output",
+        default=None,
+        type=str,
+        metavar="OUTPUT_FILE",
+        help="where to store output json data",
     )
     parser.add_argument(
-        "-m", "--module", dest="module", help="to listen",
-        required=False, type=str, default=None,
+        "-m", "--module", dest="module", help="to listen", required=False, type=str, default=None
     )
     parser.add_argument(
-        "-t", "--timeout", dest="timeout", help="timeout in ms (default=0 - listen forever)",
-        type=int, default=0
+        "-t",
+        "--timeout",
+        dest="timeout",
+        help="timeout in ms (default=0 - listen forever)",
+        type=int,
+        default=0,
     )
     parser.add_argument(
-        "-l", "--log-file", default=None,
-        help="file where the logs will we appended", required=False
+        "-l",
+        "--log-file",
+        default=None,
+        help="file where the logs will we appended",
+        required=False,
     )
 
     subparsers = parser.add_subparsers(help="buses", dest="bus")
     subparsers.required = True
 
     unix_parser = subparsers.add_parser(
-        "unix-socket", help="use unix socket to obtain notifications")
-    unix_parser.add_argument("--path", dest="path", default='/tmp/foris-controller.soc')
+        "unix-socket", help="use unix socket to obtain notifications"
+    )
+    unix_parser.add_argument("--path", dest="path", default="/tmp/foris-controller.soc")
     if "ubus" in available_buses:
         ubus_parser = subparsers.add_parser("ubus", help="use ubus to obtain notificatins")
-        ubus_parser.add_argument("--path", dest="path", default='/var/run/ubus.sock')
+        ubus_parser.add_argument("--path", dest="path", default="/var/run/ubus.sock")
     if "mqtt" in available_buses:
         mqtt_parser = subparsers.add_parser("mqtt", help="use mqtt to obtain notificatins")
-        mqtt_parser.add_argument("--host", dest="host", default='localhost')
+        mqtt_parser.add_argument("--host", dest="host", default="localhost")
         mqtt_parser.add_argument("--port", dest="port", type=int, default=1883)
         mqtt_parser.add_argument(
-            "--tls-files", nargs=3, default=[], metavar=("CA_CRT_FILE", "CRT_FILE", "KEY_FILE"),
-            help="Set a paths to TLS files to access mqtt via encrypted connection."
+            "--tls-files",
+            nargs=3,
+            default=[],
+            metavar=("CA_CRT_FILE", "CRT_FILE", "KEY_FILE"),
+            help="Set a paths to TLS files to access mqtt via encrypted connection.",
         )
         mqtt_parser.add_argument(
-            "--controller-id", type=lambda x: re.match(r"[0-9a-zA-Z]{16}", x).group().upper(),
+            "--controller-id",
+            type=lambda x: re.match(r"[0-9a-zA-Z]{16}", x).group().upper(),
             help="sets which controller on the messages bus should be configured (8 bytes is hex)",
         )
         mqtt_parser.add_argument(
-            "--passwd-file", type=lambda x: read_passwd_file(x),
+            "--passwd-file",
+            type=lambda x: read_passwd_file(x),
             help="path to passwd file (first record will be used to authenticate)",
             default=None,
         )
@@ -115,7 +132,8 @@ def main():
         if options.debug:
             logging_handler.setLevel(logging.DEBUG)
         logging_handler.setFormatter(
-            logging.Formatter("[%(created)f:%(process)d]" + logging.BASIC_FORMAT))
+            logging.Formatter("[%(created)f:%(process)d]" + logging.BASIC_FORMAT)
+        )
         logging.getLogger().addHandler(logging_handler)
 
     if options.output:
@@ -138,11 +156,13 @@ def main():
     try:
         if options.bus == "ubus":
             from foris_client.buses.ubus import UbusListener
+
             logger.debug("Using ubus to listen for notifications.")
             listener = UbusListener(options.path, handler, options.module, options.timeout)
 
         elif options.bus == "unix-socket":
             from foris_client.buses.unix_socket import UnixSocketListener
+
             logger.debug("Using unix-socket to listen for notifications.")
             try:
                 os.unlink(options.path)
@@ -152,12 +172,16 @@ def main():
 
         elif options.bus == "mqtt":
             from foris_client.buses.mqtt import MqttListener
+
             logger.debug("Using mqtt to listen for notifications.")
             listener = MqttListener(
-                options.host, options.port, handler,
-                options.module, options.timeout,
+                options.host,
+                options.port,
+                handler,
+                options.module,
+                options.timeout,
                 tls_files=options.tls_files,
-                controller_id=getattr(options, 'controller_id', "+"),
+                controller_id=getattr(options, "controller_id", "+"),
                 credentials=options.passwd_file,
             )
 

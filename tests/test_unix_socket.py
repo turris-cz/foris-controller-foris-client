@@ -35,7 +35,8 @@ def test_about(unix_listener, unix_socket_client):
 def test_long_messages(unix_listener, unix_socket_client):
     data = {
         "random_characters": "".join(
-            random.choice(string.ascii_letters) for _ in range(1024 * 1024))
+            random.choice(string.ascii_letters) for _ in range(1024 * 1024)
+        )
     }
     res = unix_socket_client.send("echo", "echo", {"request_msg": data})
     assert res == {"reply_msg": data}
@@ -68,11 +69,11 @@ def test_notifications_request(unix_listener, unix_socket_client):
     unix_socket_client.send("web", "set_language", {"language": "cs"})
     last = read_listener_output(old_data)[-1]
     assert last == {
-        u'action': u'set_language',
-        u'data': {u'language': u'cs'},
-        u'kind': u'notification',
-        u'module': u'web'
-     }
+        u"action": u"set_language",
+        u"data": {u"language": u"cs"},
+        u"kind": u"notification",
+        u"module": u"web",
+    }
 
 
 def test_notifications_cmd(unix_listener, unix_notify):
@@ -81,15 +82,15 @@ def test_notifications_cmd(unix_listener, unix_notify):
     unix_notify.notify("test_module", "test_action", {"test_data": "test"})
     data = read_listener_output(data)
     assert data[-1] == {
-        u'action': u'test_action',
-        u'data': {u'test_data': u'test'},
-        u'kind': u'notification',
-        u'module': u'test_module',
+        u"action": u"test_action",
+        u"data": {u"test_data": u"test"},
+        u"kind": u"notification",
+        u"module": u"test_module",
     }
     unix_notify.notify("maintain", "reboot_required")
     data = read_listener_output(data)
     assert data[-1] == {
-        u'action': u'reboot_required',
-        u'kind': u'notification',
-        u'module': u'maintain'
+        u"action": u"reboot_required",
+        u"kind": u"notification",
+        u"module": u"maintain",
     }

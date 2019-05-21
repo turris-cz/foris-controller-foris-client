@@ -21,5 +21,6 @@ from foris_controller.handler_base import BaseOpenwrtHandler
 
 from .. import Handler
 
+
 class OpenwrtEchoHandler(Handler, BaseOpenwrtHandler):
     pass

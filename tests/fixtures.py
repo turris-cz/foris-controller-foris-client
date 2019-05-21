@@ -76,14 +76,15 @@ def read_listener_output(old_data=None):
 
     return last_data
 
+
 @pytest.fixture(scope="session")
 def mosquitto_test(request):
 
     kwargs = {}
     if not request.config.getoption("--debug-output"):
-        devnull = open(os.devnull, 'wb')
-        kwargs['stderr'] = devnull
-        kwargs['stdout'] = devnull
+        devnull = open(os.devnull, "wb")
+        kwargs["stderr"] = devnull
+        kwargs["stdout"] = devnull
 
     mosquitto_path = os.environ.get("MOSQUITTO_PATH", "/usr/sbin/mosquitto")
     mosquitto_instance = subprocess.Popen([mosquitto_path, "-v", "-p", str(MQTT_PORT)], **kwargs)
@@ -132,24 +133,40 @@ def ubus_controller(request, ubusd_test):
 
     kwargs = {}
     if not request.config.getoption("--debug-output"):
-        devnull = open(os.devnull, 'wb')
-        kwargs['stderr'] = devnull
-        kwargs['stdout'] = devnull
+        devnull = open(os.devnull, "wb")
+        kwargs["stderr"] = devnull
+        kwargs["stdout"] = devnull
 
-    extra_paths = list(itertools.chain.from_iterable(
-        [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
+    extra_paths = list(
+        itertools.chain.from_iterable([("--extra-module-path", e) for e in EXTRA_MODULE_PATHS])
+    )
 
     env_dict = dict(os.environ)
-    env_dict['FC_UPDATER_MODULE'] = "foris_controller_testtools.svupdater"
-    kwargs['env'] = env_dict
+    env_dict["FC_UPDATER_MODULE"] = "foris_controller_testtools.svupdater"
+    kwargs["env"] = env_dict
 
     process = subprocess.Popen(
         [
-            "python", "-m", "foris_controller.controller", "-d", "-m", "about", "-m", "web",
-            "-m", "echo", "-m", "maintain", "-m", "remote",
-            "--backend", "mock"
-        ] + extra_paths + ["ubus", "--path", UBUS_PATH],
-        **kwargs
+            "python",
+            "-m",
+            "foris_controller.controller",
+            "-d",
+            "-m",
+            "about",
+            "-m",
+            "web",
+            "-m",
+            "echo",
+            "-m",
+            "maintain",
+            "-m",
+            "remote",
+            "--backend",
+            "mock",
+        ]
+        + extra_paths
+        + ["ubus", "--path", UBUS_PATH],
+        **kwargs,
     )
     yield process
 
@@ -161,24 +178,40 @@ def mqtt_controller(request, mosquitto_test):
 
     kwargs = {}
     if not request.config.getoption("--debug-output"):
-        devnull = open(os.devnull, 'wb')
-        kwargs['stderr'] = devnull
-        kwargs['stdout'] = devnull
+        devnull = open(os.devnull, "wb")
+        kwargs["stderr"] = devnull
+        kwargs["stdout"] = devnull
 
-    extra_paths = list(itertools.chain.from_iterable(
-        [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
+    extra_paths = list(
+        itertools.chain.from_iterable([("--extra-module-path", e) for e in EXTRA_MODULE_PATHS])
+    )
 
     env_dict = dict(os.environ)
-    env_dict['FC_UPDATER_MODULE'] = "foris_controller_testtools.svupdater"
-    kwargs['env'] = env_dict
+    env_dict["FC_UPDATER_MODULE"] = "foris_controller_testtools.svupdater"
+    kwargs["env"] = env_dict
 
     process = subprocess.Popen(
         [
-            "python", "-m", "foris_controller.controller", "-d", "-m", "about", "-m", "web",
-            "-m", "echo", "-m", "maintain", "-m", "remote",
-            "--backend", "mock"
-        ] + extra_paths + ["mqtt", "--host", MQTT_HOST, "--port", str(MQTT_PORT)],
-        **kwargs
+            "python",
+            "-m",
+            "foris_controller.controller",
+            "-d",
+            "-m",
+            "about",
+            "-m",
+            "web",
+            "-m",
+            "echo",
+            "-m",
+            "maintain",
+            "-m",
+            "remote",
+            "--backend",
+            "mock",
+        ]
+        + extra_paths
+        + ["mqtt", "--host", MQTT_HOST, "--port", str(MQTT_PORT)],
+        **kwargs,
     )
     yield process
 
@@ -204,13 +237,23 @@ def unix_listener(request):
 
     kwargs = {"preexec_fn": lambda: os.environ.update(PYTHONUNBUFFERED="1")}
     if not request.config.getoption("--debug-output"):
-        devnull = open(os.devnull, 'wb')
-        kwargs['stderr'] = devnull
-        kwargs['stdout'] = devnull
-    process = subprocess.Popen([
-        "foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
-        "unix-socket", "--path", NOTIFICATIONS_SOCK_PATH
-    ], **kwargs)
+        devnull = open(os.devnull, "wb")
+        kwargs["stderr"] = devnull
+        kwargs["stdout"] = devnull
+    process = subprocess.Popen(
+        [
+            "foris-listener",
+            "-d",
+            "-o",
+            NOTIFICATIONS_OUTPUT_PATH,
+            "-l",
+            LISTENER_LOG,
+            "unix-socket",
+            "--path",
+            NOTIFICATIONS_SOCK_PATH,
+        ],
+        **kwargs,
+    )
 
     while True:
         if os.path.exists(LISTENER_LOG):
@@ -238,13 +281,23 @@ def mqtt_listener(request, mosquitto_test):
 
     kwargs = {}
     if not request.config.getoption("--debug-output"):
-        devnull = open(os.devnull, 'wb')
-        kwargs['stderr'] = devnull
-        kwargs['stdout'] = devnull
+        devnull = open(os.devnull, "wb")
+        kwargs["stderr"] = devnull
+        kwargs["stdout"] = devnull
     args = [
-        "python", "-m", "foris_client.listener", "-d",
-        "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
-        "mqtt", "--host", MQTT_HOST, "--port", str(MQTT_PORT),
+        "python",
+        "-m",
+        "foris_client.listener",
+        "-d",
+        "-o",
+        NOTIFICATIONS_OUTPUT_PATH,
+        "-l",
+        LISTENER_LOG,
+        "mqtt",
+        "--host",
+        MQTT_HOST,
+        "--port",
+        str(MQTT_PORT),
     ]
     process = subprocess.Popen(args, **kwargs)
 
@@ -274,26 +327,40 @@ def unix_controller(request):
 
     kwargs = {}
     if not request.config.getoption("--debug-output"):
-        devnull = open(os.devnull, 'wb')
-        kwargs['stderr'] = devnull
-        kwargs['stdout'] = devnull
+        devnull = open(os.devnull, "wb")
+        kwargs["stderr"] = devnull
+        kwargs["stdout"] = devnull
 
     env_dict = dict(os.environ)
-    env_dict['FC_UPDATER_MODULE'] = "foris_controller_testtools.svupdater"
-    kwargs['env'] = env_dict
+    env_dict["FC_UPDATER_MODULE"] = "foris_controller_testtools.svupdater"
+    kwargs["env"] = env_dict
 
-    extra_paths = list(itertools.chain.from_iterable(
-        [("--extra-module-path", e) for e in EXTRA_MODULE_PATHS]))
+    extra_paths = list(
+        itertools.chain.from_iterable([("--extra-module-path", e) for e in EXTRA_MODULE_PATHS])
+    )
 
     process = subprocess.Popen(
         [
-            "python", "-m", "foris_controller.controller", "-d", "-m", "remote",
-            "-m", "about", "-m", "web", "-m", "echo", "-m", "maintain",
-            "--backend", "mock",
-        ] + extra_paths + [
-            "unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH
-        ],
-        **kwargs
+            "python",
+            "-m",
+            "foris_controller.controller",
+            "-d",
+            "-m",
+            "remote",
+            "-m",
+            "about",
+            "-m",
+            "web",
+            "-m",
+            "echo",
+            "-m",
+            "maintain",
+            "--backend",
+            "mock",
+        ]
+        + extra_paths
+        + ["unix-socket", "--path", SOCK_PATH, "--notifications-path", NOTIFICATIONS_SOCK_PATH],
+        **kwargs,
     )
     yield process
     process.kill()
@@ -302,8 +369,8 @@ def unix_controller(request):
 @pytest.fixture(scope="function")
 def ubus_client(ubusd_test, ubus_controller):
     from foris_client.buses.ubus import UbusSender
-    wait_process = subprocess.Popen(
-        ["ubus", "wait_for", "foris-controller-about", "-s", UBUS_PATH])
+
+    wait_process = subprocess.Popen(["ubus", "wait_for", "foris-controller-about", "-s", UBUS_PATH])
     wait_process.wait()
 
     sender = UbusSender(UBUS_PATH)
@@ -314,6 +381,7 @@ def ubus_client(ubusd_test, ubus_controller):
 @pytest.fixture(scope="function")
 def unix_socket_client(unix_controller):
     from foris_client.buses.unix_socket import UnixSocketSender
+
     while not os.path.exists(SOCK_PATH):
         time.sleep(0.3)
     sender = UnixSocketSender(SOCK_PATH)
@@ -327,6 +395,7 @@ def mqtt_client(mosquitto_test, mqtt_controller):
     wait_for_mqtt_ready()
 
     from foris_client.buses.mqtt import MqttSender
+
     sender = MqttSender(MQTT_HOST, MQTT_PORT, None)
     yield sender
     sender.disconnect()
@@ -346,13 +415,23 @@ def ubus_listener(request):
 
     kwargs = {"preexec_fn": lambda: os.environ.update(PYTHONUNBUFFERED="1")}
     if not request.config.getoption("--debug-output"):
-        devnull = open(os.devnull, 'wb')
-        kwargs['stderr'] = devnull
-        kwargs['stdout'] = devnull
-    process = subprocess.Popen([
-        "foris-listener", "-d", "-o", NOTIFICATIONS_OUTPUT_PATH, "-l", LISTENER_LOG,
-        "ubus", "--path", UBUS_PATH
-    ], **kwargs)
+        devnull = open(os.devnull, "wb")
+        kwargs["stderr"] = devnull
+        kwargs["stdout"] = devnull
+    process = subprocess.Popen(
+        [
+            "foris-listener",
+            "-d",
+            "-o",
+            NOTIFICATIONS_OUTPUT_PATH,
+            "-l",
+            LISTENER_LOG,
+            "ubus",
+            "--path",
+            UBUS_PATH,
+        ],
+        **kwargs,
+    )
 
     while True:
         if os.path.exists(LISTENER_LOG):
@@ -373,6 +452,7 @@ def ubus_listener(request):
 @pytest.fixture(scope="function")
 def unix_notify(unix_listener):
     from foris_controller.buses.unix_socket import UnixSocketNotificationSender
+
     while not os.path.exists(NOTIFICATIONS_SOCK_PATH):
         time.sleep(0.2)
     sender = UnixSocketNotificationSender(NOTIFICATIONS_SOCK_PATH)
@@ -383,6 +463,7 @@ def unix_notify(unix_listener):
 @pytest.fixture(scope="function")
 def ubus_notify(ubus_listener):
     from foris_controller.buses.ubus import UbusNotificationSender
+
     while not os.path.exists(UBUS_PATH):
         time.sleep(0.2)
     sender = UbusNotificationSender(UBUS_PATH)

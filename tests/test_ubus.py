@@ -26,8 +26,14 @@ from foris_client.buses.ubus import UbusSender
 from foris_client.buses.base import ControllerError
 
 from .fixtures import (
-    ubusd_test, ubusd_test2, ubus_controller, ubus_client, UBUS_PATH, UBUS_PATH2, ubus_listener,
-    ubus_notify
+    ubusd_test,
+    ubusd_test2,
+    ubus_controller,
+    ubus_client,
+    UBUS_PATH,
+    UBUS_PATH2,
+    ubus_listener,
+    ubus_notify,
 )
 
 
@@ -40,7 +46,8 @@ def test_about(ubusd_test, ubus_client):
 def test_long_messages(ubusd_test, ubus_client):
     data = {
         "random_characters": "".join(
-            random.choice(string.ascii_letters) for _ in range(1024 * 1024))
+            random.choice(string.ascii_letters) for _ in range(1024 * 1024)
+        )
     }
     res = ubus_client.send("echo", "echo", {"request_msg": data})
     assert res == {"reply_msg": data}
@@ -63,6 +70,7 @@ def test_extra_data(ubusd_test, ubus_client):
 
 def test_reconnect(ubusd_test, ubusd_test2):
     import logging
+
     logging.basicConfig()
     logging.disable(logging.ERROR)
     sender1 = UbusSender(UBUS_PATH)
@@ -88,10 +96,10 @@ def test_notifications_request(ubusd_test, ubus_controller, ubus_listener, ubus_
     ubus_client.send("web", "set_language", {"language": "cs"})
     last = read_listener_output(old_data)[-1]
     assert last == {
-        u'action': u'set_language',
-        u'data': {u'language': u'cs'},
-        u'kind': u'notification',
-        u'module': u'web'
+        u"action": u"set_language",
+        u"data": {u"language": u"cs"},
+        u"kind": u"notification",
+        u"module": u"web",
     }
 
 
@@ -101,15 +109,15 @@ def test_notifications_cmd(ubusd_test, ubus_listener, ubus_notify):
     ubus_notify.notify("test_module", "test_action", {"test_data": "test"})
     data = read_listener_output(data)
     assert data[-1] == {
-        u'action': u'test_action',
-        u'data': {u'test_data': u'test'},
-        u'kind': u'notification',
-        u'module': u'test_module',
+        u"action": u"test_action",
+        u"data": {u"test_data": u"test"},
+        u"kind": u"notification",
+        u"module": u"test_module",
     }
     ubus_notify.notify("maintain", "reboot_required")
     data = read_listener_output(data)
     assert data[-1] == {
-        u'action': u'reboot_required',
-        u'kind': u'notification',
-        u'module': u'maintain'
+        u"action": u"reboot_required",
+        u"kind": u"notification",
+        u"module": u"maintain",
     }

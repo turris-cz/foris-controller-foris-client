@@ -28,10 +28,9 @@ class EchoModule(BaseModule):
 
     def action_echo(self, data):
         # this action is for testing purposes so we don't need to use any backend
-        return {'reply_msg': data["request_msg"]}
+        return {"reply_msg": data["request_msg"]}
 
 
-@wrap_required_functions([
-])
+@wrap_required_functions([])
 class Handler(object):
     pass

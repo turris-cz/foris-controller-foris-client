@@ -136,7 +136,7 @@ def main():
     options = parser.parse_args()
 
     if options.debug:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.basicConfig(level=logging.DEBUG, format="%(threadName)s: " + logging.BASIC_FORMAT)
     else:
         logging.basicConfig()
     logger.debug("Version %s" % __version__)

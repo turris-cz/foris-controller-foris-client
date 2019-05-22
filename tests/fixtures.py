@@ -63,7 +63,7 @@ def wait_for_mqtt_ready():
     client._thread.join(5)
 
 
-def read_listener_output(old_data=None):
+def read_listener_output(old_data=None, filters=[]):
     while not os.path.exists(NOTIFICATIONS_OUTPUT_PATH):
         time.sleep(0.2)
 
@@ -71,6 +71,12 @@ def read_listener_output(old_data=None):
         with open(NOTIFICATIONS_OUTPUT_PATH) as f:
             data = f.readlines()
         last_data = [json.loads(e.strip().split(" ", 1)[1]) for e in data]
+        if filters:
+            last_data = [
+                e
+                for e in last_data
+                if any([True for n in filters if e["module"] == n[0] and e["action"] == n[1]])
+            ]
         if not old_data == last_data:
             break
 

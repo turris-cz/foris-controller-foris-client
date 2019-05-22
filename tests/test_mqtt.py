@@ -74,10 +74,11 @@ def test_timeout(mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client):
 
 def test_notifications_request(mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client):
     _, read_listener_output = mqtt_listener
-    old_data = read_listener_output()
+    filters = [("web", "set_language")]
+    notifications = read_listener_output(filters=filters)
     mqtt_client.send("web", "set_language", {"language": "cs"})
-    last = read_listener_output(old_data)[-1]
-    assert last == {
+    notifications = read_listener_output(notifications, filters=filters)
+    assert notifications[-1] == {
         u"action": u"set_language",
         u"data": {u"language": u"cs"},
         u"kind": u"notification",
@@ -89,18 +90,20 @@ def test_notifications_cmd(
     mosquitto_test, mqtt_listener, mqtt_controller, mqtt_client, mqtt_notify
 ):
     _, read_listener_output = mqtt_listener
-    data = read_listener_output()
+    filters = [("test_module", "test_action"), ("maintain", "reboot_required")]
+    notifications = read_listener_output(filters=filters)
     mqtt_notify.notify("test_module", "test_action", {"test_data": "test"})
-    data = read_listener_output(data)
-    assert data[-1] == {
+    notifications = read_listener_output(notifications, filters=filters)
+    assert notifications[-1] == {
         u"action": u"test_action",
         u"data": {u"test_data": u"test"},
         u"kind": u"notification",
         u"module": u"test_module",
     }
+
     mqtt_notify.notify("maintain", "reboot_required")
-    data = read_listener_output(data)
-    assert data[-1] == {
+    notifications = read_listener_output(notifications, filters=filters)
+    assert notifications[-1] == {
         u"action": u"reboot_required",
         u"kind": u"notification",
         u"module": u"maintain",

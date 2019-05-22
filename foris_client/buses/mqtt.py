@@ -23,7 +23,9 @@ import json
 import threading
 import time
 import ssl
+import queue
 import re
+import typing
 
 from .base import BaseSender, BaseListener, ControllerMissing, prepare_controller_id
 
@@ -32,6 +34,8 @@ from typing import Optional
 
 
 ANNOUNCER_PERIOD_REQUIRED = 5.0  # in seconds
+CONNECT_TIMEOUT = 15  # in seconds
+RETENTION_TIMEOUT = 30  # in seconds
 
 logger = logging.getLogger(__name__)
 
@@ -40,70 +44,146 @@ def _normalize_timeout(timeout):
     return float(timeout or 0) / 1000
 
 
-class MqttSender(BaseSender):
-    def __init__(self, *args, **kwargs):
-        self.lock = threading.Lock()
-        self.announcer_check_mid = None
-        self.announcer_check_last = None
-        self.mqtt_client_id = f"{uuid.uuid4()}-client-sender"
-        super(MqttSender, self).__init__(*args, **kwargs)
+class ReplyListener(threading.Thread):
+    def __init__(
+        self,
+        replies: typing.Dict[typing.Tuple[str, str], list],
+        replies_lock: threading.Lock,
+        controllers: typing.Dict[str, dict],
+        controllers_lock: threading.Lock,
+        host: str,
+        port: int,
+        client: mqtt.Client,
+    ):
+        self.host = host
+        self.port = port
+        self.client = client
+        self.replies = replies
+        self.replies_lock = replies_lock
+        self.controllers: typing.Dict[str, dict] = controllers
+        self.controllers_lock: threading.lock = controllers_lock
+        super().__init__(group=None, target=None, name="foris-client-reply-listener", daemon=True)
 
-    def connect(self, host, port, default_timeout=None, tls_files=[], credentials=None):
-        self.default_timeout = _normalize_timeout(default_timeout)
-        self.credentials = credentials
-        self.tls_files = tls_files
-        self.controller_id = None
+    def run(self):
+        logger.debug("Reply listener is starting.")
 
-        def on_connect(client, userdata, flags, rc):
-            logger.debug("Connected to mqtt server.")
-            rc, mid = client.subscribe(
-                "foris-controller/+/notification/remote/action/advertize", qos=0
-            )
-            if rc == mqtt.MQTT_ERR_SUCCESS:
-                self.announcer_check_mid = mid
-                logger.debug("Subscribing to announcer (mid=%d).", self.announcer_check_mid)
+        def on_connect(client: mqtt.Client, userdata, flags, rc):
+            logger.debug("Client connected.")
+            client.subscribe("foris-controller/+/reply/+")
+            client.subscribe("foris-controller/+/notification/remote/action/advertize")
 
         def on_subscribe(client, userdata, mid, granted_qos):
-            logger.debug("Subscribed to %d.", mid)
-            if mid != self.announcer_check_mid:
-                msg = {"reply_msg_id": str(self.reply_msg_id)}
-                if self.data is not None:
-                    msg["data"] = self.data
+            logger.debug("Subscribed to %s.", mid)
 
-                client.publish(self.publish_topic, json.dumps(msg), qos=0)
+        def on_disconnect(client, userdata, rc):
+            logger.debug("Disconneted")
 
         def on_message(client, userdata, msg):
-            logger.debug("Msg recieved for '%s' (msg=%s", msg.topic, msg.payload)
+            logger.debug("Msg recieved for '%s' (msg=%s)", msg.topic, msg.payload)
             match = re.match(
                 r"foris-controller/([^/]+)/notification/remote/action/advertize", msg.topic
             )
             if match:
+                # recieved a messupdate controller list
                 try:
-                    json.loads(msg.payload)
+                    data = json.loads(msg.payload)
                 except ValueError:
-                    logger.error("Adverticement not in JSON format.")
+                    logger.error("Advertisement not in JSON format.")
                     return
-                if self.controller_id == match.group(1):
-                    self.announcer_check_last = time.time()
-            else:
+                with self.controllers_lock:
+                    self.controllers[match.group(1)] = {
+                        "last": time.time(),
+                        "working_replies": data["data"].get("working_replies", []),
+                    }
+                    # clean older controller records
+                    too_old = [
+                        k
+                        for k, v in self.controllers.items()
+                        if v["last"] < time.time() - RETENTION_TIMEOUT
+                    ]
+                    for k in too_old:
+                        del self.controllers[k]
+                logger.debug("Msg for '%s' was processed", msg.topic)
+                return
+            match = re.match(r"foris-controller/([^/]+)/reply/([^/]+)", msg.topic)
+            if match:
+                controller_id, reply_id = match.groups()
+                # Find message among replies
+                with self.replies_lock:
+                    record: typing.Optinal[
+                        typing.Tuple[float, queue.Queue, bool]
+                    ] = self.replies.get((controller_id, reply_id))
+
+                    # clean older replies
+                    too_old = [
+                        k for k, v in self.replies.items() if v[0] < time.time() - RETENTION_TIMEOUT
+                    ]
+                    for k in too_old:
+                        del self.replies[k]
+
+                    if record:
+                        _, output_queue, is_processed = record
+                        if is_processed:
+                            # message is already recieved and it is being processed
+                            return
+                        else:
+                            # mark that the message is being processed
+                            self.replies[(controller_id, reply_id)][2] = True
+
+                    else:
+                        logger.debug(
+                            "Message id not found. "
+                            "(probably it is expired or doesn't belong to this client)"
+                        )
+                        return
+                # Parse and send queue the message
                 try:
-                    parsed = json.loads(msg.payload)
+                    data = json.loads(msg.payload)
                 except ValueError:
-                    logger.error("Reply is not in JSON format.")
+                    logger.error("Reply not in JSON format.")
                     return
-                self.result = parsed
-                self.passed = True
+                logger.debug("Sending response data '%s'", data)
+                output_queue.put(data)
+                logger.debug("Msg for '%s' was processed", msg.topic)
+                return
 
-                client.unsubscribe(msg.topic)
-                client.loop_stop()
+            # this code should not be reached
+            raise ValueError("Topic '%s' doesn't match", msg.topic)
 
-        def on_unsubscribe(client, userdata, mid):
-            logger.debug("Unsubscribing from %d.", mid)
+        self.client.on_connect = on_connect
+        self.client.on_subscribe = on_subscribe
+        self.client.on_message = on_message
+        self.client.on_disconnect = on_disconnect
 
-        def on_disconnect(client, userdata, rc):
-            logger.debug("Sender Disconnected.")
+        # start to connect
+        self.client.connect(self.host, self.port, CONNECT_TIMEOUT)
 
-        self.client = mqtt.Client(client_id=self.mqtt_client_id, clean_session=False)
+        # Run in the loop till manually disconnected
+        self.client.loop_forever()
+
+        # try to unsubscribe gracefully
+        self.client.unsubscribe("foris-controller/+/reply/+")
+        self.client.unsubscribe("foris-controller/+/notification/remote/action/advertize")
+        self.client.loop()
+
+
+class MqttSender(BaseSender):
+    def __init__(self, *args, **kwargs):
+        self.replies: typing.Dict[typing.Tuple[str, str], list] = {}
+        self.replies_lock: threading.Lock = threading.Lock()
+        self.controllers: typing.Dict[str, dict] = {}
+        self.controllers_lock: threading.Lock = threading.Lock()
+        self.client_lock: threading.Lock = threading.Lock()
+        self.client_published_event: threading.Event = threading.Event()
+        self.client: mqtt.Client
+
+        self.mqtt_client_id = f"{uuid.uuid4()}-client-sender"
+        self.mqtt_reply_client_id = f"{uuid.uuid4()}-client-reply-watcher"
+        super(MqttSender, self).__init__(*args, **kwargs)
+
+    def _prepare_client(self, client_id: str) -> mqtt.Client:
+        client = mqtt.Client(client_id=client_id, clean_session=False)
+
         if self.tls_files:
             ca_path, cert_path, key_path = self.tls_files
             context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
@@ -112,86 +192,183 @@ class MqttSender(BaseSender):
             context.verify_mode = ssl.CERT_REQUIRED
             # can't assume that server cert is issued to particular hostname/ipaddress
             context.check_hostname = False
-            self.client.tls_set_context(context)
-
-        self.client.on_connect = on_connect
-        self.client.on_subscribe = on_subscribe
-        self.client.on_message = on_message
-        self.client.on_disconnect = on_disconnect
+            client.tls_set_context(context)
 
         if self.credentials:
-            self.client.username_pw_set(*self.credentials)
-        self.client.connect(host, port, 30)
+            client.username_pw_set(*self.credentials)
 
-        # Start the loop to keep the connection alive
+        return client
+
+    def connect(self, host, port, default_timeout=None, tls_files=[], credentials=None):
+        self.default_timeout = _normalize_timeout(default_timeout)
+        self.credentials = credentials
+        self.tls_files = tls_files
+        self.controller_id = None
+
+        # prepare sender client
+        def on_connect(client, userdata, flags, rc):
+            logger.debug("Client sender connected to mqtt server.")
+
+        def on_publish(client: mqtt.Client, userdata, mid):
+            self.client_published_event.set()
+            client.loop_stop(force=True)  # stopping self
+            logger.debug("Client sender published a message (mid=%d).", mid)
+
+        def on_disconnect(client, userdata, rc):
+            logger.debug("Client sender Disconnected.")
+
+        self.client: mqtt.Client = self._prepare_client(self.mqtt_client_id)
+        self.client.on_connect = on_connect
+        self.client.on_publish = on_publish
+        self.client.on_disconnect = on_disconnect
+
+        # prepare reply listener client
+        self.reply_client = self._prepare_client(self.mqtt_reply_client_id)
+        self.reply_worker = ReplyListener(
+            replies=self.replies,
+            replies_lock=self.replies_lock,
+            controllers=self.controllers,
+            controllers_lock=self.controllers_lock,
+            host=host,
+            port=port,
+            client=self.reply_client,
+        )
+        self.reply_worker.start()
+        logger.debug("Reply worker %s has started.", self.reply_worker)
+
+        # sender start client thread
+        self.client.connect(host, port, CONNECT_TIMEOUT)
         self.client.loop_start()
+        logger.debug("Sending thread %s has started.", self.client._thread)
 
     def disconnect(self):
-        logger.debug("Sender Disconnected.")
         self.client.disconnect()
+        logger.debug("Sender Disconnected.")
+        self.reply_client.disconnect()
+        logger.debug("Reply client Disconnected.")
 
-    def send(self, module: str, action: str, data: dict, timeout=None, controller_id: str = None):
+    def send_internal(
+        self, msg_topic: str, msg_data: dict, reply_id: str, controller_id: str
+    ) -> queue.Queue:
+        """ Sends the message without waiting for the response
+        """
+
+        output: queue.Queue
+        # only one message can be send at once
+        with self.client_lock:
+            logger.debug("Sending message for '%s'.", msg_topic)
+
+            # preapre queue for the listener
+            with self.replies_lock:
+                if (controller_id, reply_id) in self.replies:
+                    # already waiting for reply -> just update the time
+                    logger.debug("Reusing reply_id %s", reply_id)
+                    self.replies[(controller_id, reply_id)][0] = time.time()
+                    output = self.replies[(controller_id, reply_id)][1]
+                else:
+                    # create new queue to wait
+                    logger.debug("Using new reply_id '%s", reply_id)
+                    output = queue.Queue(maxsize=1)
+                    self.replies[(controller_id, reply_id)] = [time.time(), output, False]
+
+            # clear published event
+            self.client_published_event.clear()
+
+            # start to perform
+            raw_data = json.dumps(msg_data)
+            self.client.publish(msg_topic, raw_data, qos=0)
+
+            logger.debug("Sending msg for '%s'", msg_topic)
+            self.client.loop_start()
+
+            if not self.client_published_event.wait(0.3):
+                logger.debug("Failed to publish the message for '%s'. (retry)", msg_topic)
+                if not self.client.publish(msg_topic, raw_data, qos=0):
+                    logger.debug("Failed to publish the message for '%s'. (exception)", msg_topic)
+                    # Msg can't reache thte controller
+                    self.client.loop_stop(force=True)
+                    raise ControllerMissing(controller_id)
+
+            self.client.loop_stop(force=True)
+            logger.debug("Message for '%s' was sent", msg_topic)
+
+        return output
+
+    def send(
+        self, module: str, action: str, data: dict, timeout=None, controller_id: str = None
+    ) -> dict:
+        """ Sends the message and waits for the response
+        :param timeout: wait for X seconds for reply (0 => wait forever)
+        """
         controller_id = prepare_controller_id(controller_id)
 
         timeout = self.default_timeout if timeout is None else _normalize_timeout(timeout)
-        msg_id = uuid.uuid1()
+        reply_id = str(uuid.uuid4())
         publish_topic: Optional[str] = "foris-controller/%s/request/%s/action/%s" % (
             controller_id,
             module,
             action,
         )
-        reply_topic: Optional[str] = "foris-controller/%s/reply/%s" % (controller_id, msg_id)
-        with self.lock:
-            self.controller_id = controller_id
-            self.announcer_check_last = time.time()  # reset announcer counter
-            self.reply_msg_id = msg_id
-            self.data: Optional[dict] = data
-            self.publish_topic = publish_topic
-            self.passed = False
-            self.client.subscribe(reply_topic, qos=0)
-            self.client.loop_start()
 
-            if not timeout:  # wait forever
-                while time.time() - self.announcer_check_last <= ANNOUNCER_PERIOD_REQUIRED:
-                    self.client._thread.join(ANNOUNCER_PERIOD_REQUIRED)
-                    if self.passed:
-                        break
-                if not self.passed:
-                    # announcements lost -> missing controller
-                    raise ControllerMissing(self.controller_id)
-            else:
-                for i in range(int(timeout / ANNOUNCER_PERIOD_REQUIRED)):
-                    self.client._thread.join(ANNOUNCER_PERIOD_REQUIRED)
-                    if self.passed:
-                        break
-                    if time.time() - self.announcer_check_last > ANNOUNCER_PERIOD_REQUIRED:
-                        # announcements lost -> missing controller
-                        raise ControllerMissing(self.controller_id)
+        msg = {"reply_msg_id": reply_id}
+        if data is not None:
+            msg["data"] = data
 
-                # last part of timeout
-                last_period = timeout % ANNOUNCER_PERIOD_REQUIRED
-                if not self.passed and last_period:
-                    self.client._thread.join(last_period)
+        output: queue.Queue
 
-            self.client.loop_stop(True)
+        def try_send():
+            try:
+                return self.send_internal(publish_topic, msg, reply_id, controller_id)
+            except ConnectionError:
+                # retry when fosquitto restarts
+                logger.warning("Connection failed, trying to resend '%s'", publish_topic)
+                try:
+                    return self.send_internal(publish_topic, msg, reply_id, controller_id)
+                except ConnectionError:
+                    logger.error("Publishing into '%s' has failed.", publish_topic)
+                    raise
 
-            if self.passed:
-                result = self.result
+        def check_controllers(try_to_resend: bool = False) -> typing.Optional[queue.Queue]:
+            with self.controllers_lock:
+                controller = self.controllers.get(controller_id)
+                if not controller:
+                    # controller hasn't appear yet
+                    raise ControllerMissing(controller_id)
+                if controller["last"] < time.time() - ANNOUNCER_PERIOD_REQUIRED:
+                    # controller is not alive
+                    raise ControllerMissing(controller_id)
+                if try_to_resend and reply_id not in controller["working_replies"]:
+                    # message is not being processed by the controller
+                    logger.warning(
+                        "Message hasn't reached controller trying to resend '%s'", publish_topic
+                    )
+                    return try_send()
+                # otherwise controller is performing some long lasting task and hasn't replied yet
 
-            self.result = None
-            self.publish_topic = None
-            self.data = None
+        output = try_send()
 
-            if not self.passed:
-                raise RuntimeError("Timeout occured")
+        def process_resp(resp: dict):
+            self._raise_exception_on_error(resp)
+            return resp.get("data")
 
-            # start the loop again to keep the connection alive
-            self.client.loop_start()
+        max_time: float = time.time() + timeout
+        try:
+            res = output.get(timeout=ANNOUNCER_PERIOD_REQUIRED)
+            return process_resp(res)
+        except queue.Empty:
+            # Didn't finishend in time, try to check whether controller_id is processing the message
+            output = check_controllers(True)
 
-        # raise exception on error
-        self._raise_exception_on_error(result)
+        # right now we are passed first ANNOUNCER_PERIOD_REQUIRED and waiting for the response
+        while time.time() <= max_time:
+            try:
+                return process_resp(output.get(timeout=ANNOUNCER_PERIOD_REQUIRED))
+            except queue.Empty:
+                check_controllers()
 
-        return result.get("data")
+    def __del__(self):
+        """ Close all connections -> worker thread should eventually terminate"""
+        self.disconnect()
 
 
 class MqttListener(BaseListener):
@@ -230,7 +407,7 @@ class MqttListener(BaseListener):
             self.connected = True
 
         def on_subscribe(client, userdata, mid, granted_qos):
-            logger.debug("Subscirbed (mid=%d)", mid)
+            logger.debug("Subscribed (mid=%d)", mid)
 
         def on_message(client, userdata, msg):
             logger.debug("Notification recieved (topic=%s, payload=%s)", msg.topic, msg.payload)
@@ -263,7 +440,7 @@ class MqttListener(BaseListener):
         self.connected = None
         if self.credentials:
             self.client.username_pw_set(*self.credentials)
-        self.client.connect(host, port, 30)
+        self.client.connect(host, port, CONNECT_TIMEOUT)
 
     def disconnect(self):
         logger.debug("Closing connection.")

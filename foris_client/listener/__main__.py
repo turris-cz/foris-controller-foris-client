@@ -122,7 +122,7 @@ def main():
 
     logging_format = "%(levelname)s:%(name)s:%(message)." + str(LOGGER_MAX_LEN) + "s"
     if options.debug:
-        logging.basicConfig(level=logging.DEBUG, format=logging_format)
+        logging.basicConfig(level=logging.DEBUG, format="%(threadName)s: " + logging.BASIC_FORMAT)
     else:
         logging.basicConfig(format=logging_format)
     logger.debug("Version %s" % __version__)

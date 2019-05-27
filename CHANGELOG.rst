@@ -1,3 +1,10 @@
+1.0 (2019-05-27)
+----------------
+
+* mqtt: replies are processed from another thread
+* mqtt: should be more resilent through mqtt server restarts
+* mqtt: should be able to process who requests in parallel (using send_internal and queue.Queue)
+
 0.9.9 (2019-04-03)
 ------------------
 

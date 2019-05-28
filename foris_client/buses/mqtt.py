@@ -211,7 +211,6 @@ class MqttSender(BaseSender):
 
         def on_publish(client: mqtt.Client, userdata, mid):
             self.client_published_event.set()
-            client.loop_stop(force=True)  # stopping self
             logger.debug("Client sender published a message (mid=%d).", mid)
 
         def on_disconnect(client, userdata, rc):
@@ -279,17 +278,14 @@ class MqttSender(BaseSender):
             self.client.publish(msg_topic, raw_data, qos=0)
 
             logger.debug("Sending msg for '%s'", msg_topic)
-            self.client.loop_start()
 
             if not self.client_published_event.wait(0.3):
                 logger.debug("Failed to publish the message for '%s'. (retry)", msg_topic)
                 if not self.client.publish(msg_topic, raw_data, qos=0):
                     logger.debug("Failed to publish the message for '%s'. (exception)", msg_topic)
                     # Msg can't reache thte controller
-                    self.client.loop_stop(force=True)
                     raise ControllerMissing(controller_id)
 
-            self.client.loop_stop(force=True)
             logger.debug("Message for '%s' was sent", msg_topic)
 
         return output

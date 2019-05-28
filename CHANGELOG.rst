@@ -1,3 +1,8 @@
+1.0.1 (2019-05-28)
+------------------
+
+* mqtt: keep background sending thread running
+
 1.0 (2019-05-27)
 ----------------
 

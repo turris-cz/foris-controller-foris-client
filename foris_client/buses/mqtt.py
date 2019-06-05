@@ -312,7 +312,7 @@ class MqttSender(BaseSender):
 
         output: queue.Queue
 
-        def try_send():
+        def try_send() -> queue.Queue:
             try:
                 return self.send_internal(publish_topic, msg, reply_id, controller_id)
             except ConnectionError:
@@ -324,7 +324,7 @@ class MqttSender(BaseSender):
                     logger.error("Publishing into '%s' has failed.", publish_topic)
                     raise
 
-        def check_controllers(try_to_resend: bool = False) -> typing.Optional[queue.Queue]:
+        def check_controllers() -> bool:
             with self.controllers_lock:
                 controller = self.controllers.get(controller_id)
                 if not controller:
@@ -333,13 +333,14 @@ class MqttSender(BaseSender):
                 if controller["last"] < time.time() - ANNOUNCER_PERIOD_REQUIRED:
                     # controller is not alive
                     raise ControllerMissing(controller_id)
-                if try_to_resend and reply_id not in controller["working_replies"]:
+                if reply_id not in controller["working_replies"]:
                     # message is not being processed by the controller
                     logger.warning(
                         "Message hasn't reached controller trying to resend '%s'", publish_topic
                     )
-                    return try_send()
+                    return False
                 # otherwise controller is performing some long lasting task and hasn't replied yet
+                return True
 
         output = try_send()
 
@@ -348,19 +349,16 @@ class MqttSender(BaseSender):
             return resp.get("data")
 
         max_time: float = time.time() + timeout
-        try:
-            res = output.get(timeout=ANNOUNCER_PERIOD_REQUIRED)
-            return process_resp(res)
-        except queue.Empty:
-            # Didn't finishend in time, try to check whether controller_id is processing the message
-            output = check_controllers(True)
 
         # right now we are passed first ANNOUNCER_PERIOD_REQUIRED and waiting for the response
-        while time.time() <= max_time:
+        while timeout == 0.0 or time.time() <= max_time:
             try:
                 return process_resp(output.get(timeout=ANNOUNCER_PERIOD_REQUIRED))
             except queue.Empty:
-                check_controllers()
+                if not check_controllers():
+                    output = try_send()
+
+        raise TimeoutError()
 
     def __del__(self):
         """ Close all connections -> worker thread should eventually terminate"""

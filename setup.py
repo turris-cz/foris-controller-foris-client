@@ -37,7 +37,7 @@ setup(
         'foris_client.listener',
         'foris_client.buses',
     ],
-    url='https://gitlab.labs.nic.cz/turris/foris-client',
+    url='https://gitlab.labs.nic.cz/turris/foris-controller/foris-client',
     license='COPYING',
     description=DESCRIPTION,
     long_description=open('README.rst').read(),
@@ -52,8 +52,8 @@ setup(
     ],
     extras_require={
         'testsuite': [
-            "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller.git#egg=foris-controller",
-            "foris-controller-testtools @ git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git#egg=foris-controller-testtools",
+            "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
+            "foris-controller-testtools @ git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
         ],
         'ubus': ["ubus"],
         'mqtt': ["paho-mqtt"],
@@ -65,8 +65,8 @@ setup(
         ]
     },
     dependency_links=[
-        "git+https://gitlab.labs.nic.cz/turris/foris-controller.git#egg=foris-controller",
-        "git+https://gitlab.labs.nic.cz/turris/foris-controller-testtools.git#egg=foris-controller-testtools",
+        "git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
+        "git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
     ],
     zip_safe=False,
 )

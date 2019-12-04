@@ -92,14 +92,14 @@ class ReplyListener(threading.Thread):
                     return
                 with self.controllers_lock:
                     self.controllers[match.group(1)] = {
-                        "last": time.time(),
+                        "last": time.monotonic(),
                         "working_replies": data["data"].get("working_replies", []),
                     }
                     # clean older controller records
                     too_old = [
                         k
                         for k, v in self.controllers.items()
-                        if v["last"] < time.time() - RETENTION_TIMEOUT
+                        if v["last"] < time.monotonic() - RETENTION_TIMEOUT
                     ]
                     for k in too_old:
                         del self.controllers[k]
@@ -116,7 +116,9 @@ class ReplyListener(threading.Thread):
 
                     # clean older replies
                     too_old = [
-                        k for k, v in self.replies.items() if v[0] < time.time() - RETENTION_TIMEOUT
+                        k
+                        for k, v in self.replies.items()
+                        if v[0] < time.monotonic() - RETENTION_TIMEOUT
                     ]
                     for k in too_old:
                         del self.replies[k]
@@ -262,13 +264,13 @@ class MqttSender(BaseSender):
                 if (controller_id, reply_id) in self.replies:
                     # already waiting for reply -> just update the time
                     logger.debug("Reusing reply_id %s", reply_id)
-                    self.replies[(controller_id, reply_id)][0] = time.time()
+                    self.replies[(controller_id, reply_id)][0] = time.monotonic()
                     output = self.replies[(controller_id, reply_id)][1]
                 else:
                     # create new queue to wait
                     logger.debug("Using new reply_id '%s", reply_id)
                     output = queue.Queue(maxsize=1)
-                    self.replies[(controller_id, reply_id)] = [time.time(), output, False]
+                    self.replies[(controller_id, reply_id)] = [time.monotonic(), output, False]
 
             # clear published event
             self.client_published_event.clear()
@@ -330,7 +332,7 @@ class MqttSender(BaseSender):
                 if not controller:
                     # controller hasn't appear yet
                     raise ControllerMissing(controller_id)
-                if controller["last"] < time.time() - ANNOUNCER_PERIOD_REQUIRED:
+                if controller["last"] < time.monotonic() - ANNOUNCER_PERIOD_REQUIRED:
                     # controller is not alive
                     raise ControllerMissing(controller_id)
                 if reply_id not in controller["working_replies"]:
@@ -348,10 +350,10 @@ class MqttSender(BaseSender):
             self._raise_exception_on_error(resp)
             return resp.get("data")
 
-        max_time: float = time.time() + timeout
+        max_time: float = time.monotonic() + timeout
 
         # right now we are passed first ANNOUNCER_PERIOD_REQUIRED and waiting for the response
-        while timeout == 0.0 or time.time() <= max_time:
+        while timeout == 0.0 or time.monotonic() <= max_time:
             try:
                 return process_resp(output.get(timeout=ANNOUNCER_PERIOD_REQUIRED))
             except queue.Empty:

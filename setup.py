@@ -2,7 +2,7 @@
 
 #
 # foris-client
-# Copyright (C) 2017 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2017-2020 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,14 +30,14 @@ setup(
     name='foris-client',
     version=__version__,
     author='CZ.NIC, z.s.p.o. (http://www.nic.cz/)',
-    author_email='stepan.henek@nic.cz',
+    author_email='packaging@turris.cz',
     packages=[
         'foris_client',
         'foris_client.client',
         'foris_client.listener',
         'foris_client.buses',
     ],
-    url='https://gitlab.labs.nic.cz/turris/foris-controller/foris-client',
+    url='https://gitlab.nic.cz/turris/foris-controller/foris-client',
     license='COPYING',
     description=DESCRIPTION,
     long_description=open('README.rst').read(),
@@ -52,8 +52,8 @@ setup(
     ],
     extras_require={
         'testsuite': [
-            "foris-controller @ git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
-            "foris-controller-testtools @ git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
+            "foris-controller @ git+https://gitlab.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
+            "foris-controller-testtools @ git+https://gitlab.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
         ],
         'ubus': ["ubus"],
         'mqtt': ["paho-mqtt"],
@@ -65,8 +65,8 @@ setup(
         ]
     },
     dependency_links=[
-        "git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
-        "git+https://gitlab.labs.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
+        "git+https://gitlab.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
+        "git+https://gitlab.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
     ],
     zip_safe=False,
 )

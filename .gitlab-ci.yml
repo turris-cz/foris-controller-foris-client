@@ -4,6 +4,8 @@ before_script:
 
 stages:
   - test
+  - build
+  - publish
 
 .run_script: &run_script
   script:
@@ -18,3 +20,14 @@ test_python3:
   image: registry.nic.cz/turris/foris-ci/python3
   stage: test
   <<: *run_script
+
+include:
+  - remote: "https://gitlab.nic.cz/turris/foris-controller/packages/-/raw/master/templates/python.yml"
+
+build::python:
+  rules:
+    - when: always
+
+publish::python::gitlab:
+  rules:
+    - when: always

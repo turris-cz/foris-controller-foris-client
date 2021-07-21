@@ -2,7 +2,7 @@
 
 #
 # foris-client
-# Copyright (C) 2019 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2019-2021 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -94,7 +94,7 @@ def main():
     unix_parser.add_argument("--path", dest="path", default="/tmp/foris-controller.soc")
     if "ubus" in available_buses:
         ubus_parser = subparsers.add_parser("ubus", help="use ubus to obtain notificatins")
-        ubus_parser.add_argument("--path", dest="path", default="/var/run/ubus.sock")
+        ubus_parser.add_argument("--path", dest="path", default="/var/run/ubus/ubus.sock")
     if "mqtt" in available_buses:
         mqtt_parser = subparsers.add_parser("mqtt", help="use mqtt to obtain notificatins")
         mqtt_parser.add_argument("--host", dest="host", default="localhost")

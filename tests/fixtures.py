@@ -102,7 +102,7 @@ def mosquitto_test(request):
 def ubusd_test():
     try:
         os.unlink(UBUS_PATH)
-    except:
+    except Exception:
         pass
 
     ubusd_instance = subprocess.Popen(["ubusd", "-A", "tests/ubus-acl", "-s", UBUS_PATH])
@@ -111,7 +111,7 @@ def ubusd_test():
     ubusd_instance.kill()
     try:
         os.unlink(UBUS_PATH)
-    except:
+    except Exception:
         pass
 
 
@@ -119,7 +119,7 @@ def ubusd_test():
 def ubusd_test2():
     try:
         os.unlink(UBUS_PATH2)
-    except:
+    except Exception:
         pass
 
     ubusd_instance = subprocess.Popen(["ubusd", "-A", "tests/ubus-acl", "-s", UBUS_PATH2])
@@ -128,7 +128,7 @@ def ubusd_test2():
     ubusd_instance.kill()
     try:
         os.unlink(UBUS_PATH2)
-    except:
+    except Exception:
         pass
 
 

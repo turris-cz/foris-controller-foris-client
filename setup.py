@@ -52,8 +52,8 @@ setup(
     ],
     extras_require={
         'testsuite': [
-            "foris-controller @ git+https://gitlab.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
-            "foris-controller-testtools @ git+https://gitlab.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
+            "foris-controller",
+            "foris-controller-testtools",
         ],
         'ubus': ["ubus"],
         'mqtt': ["paho-mqtt"],
@@ -64,9 +64,6 @@ setup(
             "foris-listener = foris_client.listener.__main__:main",
         ]
     },
-    dependency_links=[
-        "git+https://gitlab.nic.cz/turris/foris-controller/foris-controller.git#egg=foris-controller",
-        "git+https://gitlab.nic.cz/turris/foris-controller/foris-controller-testtools.git#egg=foris-controller-testtools",
-    ],
+    dependency_links=[],
     zip_safe=False,
 )

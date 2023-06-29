@@ -65,7 +65,7 @@ def test_nonexisting_action(ubusd_test, ubus_client):
 
 def test_extra_data(ubusd_test, ubus_client):
     with pytest.raises(ControllerError):
-        response = ubus_client.send("about", "get", {"extra": "data"})
+        ubus_client.send("about", "get", {"extra": "data"})
 
 
 def test_reconnect(ubusd_test, ubusd_test2):

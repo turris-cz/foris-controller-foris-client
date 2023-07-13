@@ -1,3 +1,10 @@
+1.0.5 (2023-07-13)
+------------------
+
+* CI updates
+* using tox for tests
+* publishing python packages to gitlab
+
 1.0.4 (2021-07-21)
 ------------------
 

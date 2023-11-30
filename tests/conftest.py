@@ -1,6 +1,6 @@
 #
 # foris-controller
-# Copyright (C) 2017 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2023 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,6 +17,9 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 #
 
+import os
+import pytest
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -25,3 +28,39 @@ def pytest_addoption(parser):
         default=False,
         help=("Whether show output of foris-controller cmd"),
     )
+    parser.addoption(
+        "--backend",
+        action="append",
+        default=[],
+        help=("Set test backend here. available values = (mock, openwrt)"),
+    )
+    parser.addoption(
+        "--message-bus",
+        action="append",
+        default=[],
+        help=("Set test bus here. available values = (unix-socket, ubus, mqtt)"),
+    )
+
+
+@pytest.fixture(scope="session")
+def uci_config_default_path():
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), "uci_configs")
+
+
+@pytest.fixture(scope="session")
+def file_root():
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_root")
+
+
+def pytest_generate_tests(metafunc):
+    if "backend" in metafunc.fixturenames:
+        backend = metafunc.config.option.backend
+        if not backend:
+            backend = ["openwrt"]
+        metafunc.parametrize("backend_param", backend, scope="module")
+
+    if "message_bus" in metafunc.fixturenames:
+        message_bus = metafunc.config.option.message_bus
+        if not message_bus:
+            message_bus = ["mqtt"]
+        metafunc.parametrize("message_bus_param", message_bus, scope="module")

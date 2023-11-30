@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "foris-client"
+dynamic = ["version"]
+description = "An program/library which is act as a client of foris-controller."
+readme = "README.rst"
+license = "GPL-3.0"
+authors = [
+    { name = "CZ.NIC, z.s.p.o. (http://www.nic.cz/)", email = "packaging@turris.cz" },
+]
+
+[project.optional-dependencies]
+mqtt = [
+    "paho-mqtt",
+]
+testsuite = [
+    "pytest",
+    "ubus",
+    "paho-mqtt",
+    "foris-controller",
+    "foris-controller-testtools",
+]
+ubus = [
+    "ubus",
+]
+
+[project.scripts]
+foris-client = "foris_client.client.__main__:main"
+foris-listener = "foris_client.listener.__main__:main"
+
+[project.urls]
+Homepage = "https://gitlab.nic.cz/turris/foris-controller/foris-client"
+
+[tool.hatch.version]
+path = "foris_client/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/foris_client",
+]

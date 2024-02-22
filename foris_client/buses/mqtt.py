@@ -1,6 +1,6 @@
 #
 # foris-client
-# Copyright (C) 2019 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2024 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,8 +29,18 @@ import typing
 
 from .base import BaseSender, BaseListener, ControllerMissing, prepare_controller_id
 
+from paho import mqtt as mqtt_module
 from paho.mqtt import client as mqtt
 from typing import Optional
+
+
+def mqtt_client_extra():
+    if mqtt_module.__version__.split(".")[0] not in ["1", "0"]:
+        return {
+            "callback_api_version": mqtt.CallbackAPIVersion.VERSION1,
+        }
+    else:
+        return {}
 
 
 ANNOUNCER_PERIOD_REQUIRED = 5.0  # in seconds
@@ -184,7 +194,7 @@ class MqttSender(BaseSender):
         super(MqttSender, self).__init__(*args, **kwargs)
 
     def _prepare_client(self, client_id: str) -> mqtt.Client:
-        client = mqtt.Client(client_id=client_id, clean_session=False)
+        client = mqtt.Client(client_id=client_id, clean_session=False, **mqtt_client_extra())
 
         if self.tls_files:
             ca_path, cert_path, key_path = self.tls_files
@@ -416,7 +426,7 @@ class MqttListener(BaseListener):
             ).groups()
             handler(parsed, controller_id)
 
-        self.client = mqtt.Client(client_id=self.mqtt_client_id, clean_session=False)
+        self.client = mqtt.Client(client_id=self.mqtt_client_id, clean_session=False, **mqtt_client_extra())
 
         if self.tls_files:
             ca_path, cert_path, key_path = self.tls_files

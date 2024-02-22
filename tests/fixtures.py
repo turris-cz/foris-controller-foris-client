@@ -1,6 +1,6 @@
 #
 # foris-client
-# Copyright (C) 2017 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
+# Copyright (C) 2017-2024 CZ.NIC, z.s.p.o. (http://www.nic.cz/)
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@ EXTRA_MODULE_PATHS = [
 
 
 def wait_for_mqtt_ready():
+    from paho import mqtt as mqtt_module
     from paho.mqtt import client as mqtt
 
     def on_connect(client, userdata, flags, rc):
@@ -51,11 +52,14 @@ def wait_for_mqtt_ready():
     def on_message(client, userdata, msg):
         try:
             if json.loads(msg.payload)["data"]["state"] in ["started", "running"]:
-                client.loop_stop(True)
+                client.loop_stop()
         except Exception:
             pass
 
-    client = mqtt.Client()
+    if mqtt_module.__version__.split(".")[0] not in ["1", "0"]:
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+    else:
+        client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(MQTT_HOST, MQTT_PORT, 30)

@@ -1,3 +1,10 @@
+2.0.0 (2024-02-27)
+------------------
+
+* CI updates
+* use hatchling as new build backend
+* be compatible with paho-mqtt 2.X
+
 1.0.5 (2023-07-13)
 ------------------
 

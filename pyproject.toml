@@ -16,7 +16,7 @@ authors = [
 mqtt = [
     "paho-mqtt",
 ]
-testsuite = [
+tests = [
     "pytest",
     "ubus",
     "paho-mqtt",
